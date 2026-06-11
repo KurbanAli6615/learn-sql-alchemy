@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 06: Advanced ORM Concepts — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ── */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ── */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -60px; top: 50%; transform: translateY(-50%); font-size: clamp(160px, 24vw, 300px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -16px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .mod-title { font-size: clamp(38px, 6vw, 72px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3.5px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── LAYOUT ── */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px, 3vw, 38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* ── CALLOUT ── */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #166534; }
+        .callout-blue { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl { color: #1d4ed8; }
+        .callout-purple { background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl { color: #6b21a8; }
+
+        /* ── CODE BLOCKS ── */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; } .cs { color: #87c264; } .cc { color: #6b7280; font-style: italic; }
+        .cf { color: #F0A500; } .cn { color: #7ec8e3; } .cm { color: #c084fc; } .csql { color: #38bdf8; }
+
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* ── REVEAL ── */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── PART DIVIDER ── */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* ── DB TABLE VISUAL ── */
+        .dbt-wrap { border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); margin: 20px 0; background: #fff; }
+        .dbt-head { background: var(--dark); padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; }
+        .dbt-name { font-size: 12px; font-weight: 800; color: var(--orange); font-family: 'Courier New', monospace; letter-spacing: 1px; }
+        .dbt-meta { font-size: 10px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .dbt-scroll { overflow-x: auto; }
+        table.dbt { width: 100%; border-collapse: collapse; min-width: 340px; }
+        table.dbt th { background: #f0f0f0; border-bottom: 2px solid var(--border); padding: 9px 16px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; text-align: left; font-family: 'Courier New', monospace; white-space: nowrap; }
+        table.dbt th.pk { color: var(--orange); }
+        table.dbt th.fk { color: #a855f7; }
+        table.dbt th.disc { color: #0ea5e9; }
+        table.dbt td { padding: 9px 16px; font-size: 12.5px; color: var(--dark); border-bottom: 1px solid var(--border); font-family: 'Courier New', monospace; white-space: nowrap; }
+        table.dbt tr:last-child td { border-bottom: none; }
+        table.dbt tr.row-hi td { background: rgba(240,165,0,0.07); }
+        table.dbt tr.row-hi td:first-child { border-left: 3px solid var(--orange); }
+        table.dbt tr.row-blue td { background: rgba(59,130,246,0.06); }
+        table.dbt tr.row-blue td:first-child { border-left: 3px solid var(--blue); }
+        table.dbt tr.row-green td { background: rgba(34,197,94,0.06); }
+        table.dbt tr.row-green td:first-child { border-left: 3px solid var(--green); }
+        table.dbt tr.row-purple td { background: rgba(168,85,247,0.07); }
+        table.dbt tr.row-purple td:first-child { border-left: 3px solid var(--purple); }
+        table.dbt tr.row-teal td { background: rgba(20,184,166,0.07); }
+        table.dbt tr.row-teal td:first-child { border-left: 3px solid var(--teal); }
+        .null-val { color: var(--muted); font-style: italic; }
+        .disc-val { background: rgba(14,165,233,0.1); color: #0c4a6e; padding: 1px 6px; border-radius: 3px; font-weight: 700; font-size: 11px; }
+
+        /* ── PY ↔ RESULT COMPARE ── */
+        .py-res-compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); }
+        .prc-side { overflow: hidden; }
+        .prc-label { padding: 8px 16px; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        .prc-py .prc-label { background: rgba(192,132,252,0.12); color: #7c3aed; border-bottom: 1px solid rgba(192,132,252,0.2); }
+        .prc-result .prc-label { background: rgba(34,197,94,0.1); color: #166534; border-bottom: 1px solid rgba(34,197,94,0.2); }
+        .prc-py .cb, .prc-result .cb { margin: 0; border-radius: 0; border: none; }
+        .prc-arrow { display: flex; align-items: center; justify-content: center; padding: 0 12px; background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); font-size: 20px; color: var(--orange); }
+
+        /* ── LOADING STRATEGY CARDS ── */
+        .load-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-top: 28px; }
+        .load-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .load-head { padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+        .load-badge { font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .lb-lazy   { background: rgba(59,130,246,0.12); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.25); }
+        .lb-eager  { background: rgba(34,197,94,0.12); color: #166534; border: 1px solid rgba(34,197,94,0.25); }
+        .lb-select { background: rgba(240,165,0,0.12); color: var(--orange-dark); border: 1px solid rgba(240,165,0,0.25); }
+        .lb-subq   { background: rgba(168,85,247,0.12); color: #6b21a8; border: 1px solid rgba(168,85,247,0.25); }
+        .lb-noload { background: rgba(239,68,68,0.1); color: #991b1b; border: 1px solid rgba(239,68,68,0.2); }
+        .load-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+        .load-body { padding: 12px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+        .load-ex { font-family: 'Courier New', monospace; font-size: 11px; margin-top: 8px; color: #0369a1; }
+        .load-sql-count { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 5px; margin-top: 8px; display: inline-block; }
+        .lsc-good { background: rgba(34,197,94,0.1); color: #166534; }
+        .lsc-ok   { background: rgba(240,165,0,0.1); color: var(--orange-dark); }
+        .lsc-bad  { background: rgba(239,68,68,0.1); color: #991b1b; }
+
+        /* ── RELATIONSHIP DIAGRAM ── */
+        .rel-diagram { background: var(--dark); border-radius: 14px; padding: 28px 32px; margin: 28px 0; }
+        .rd-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .rd-wrap { display: flex; align-items: center; gap: 0; }
+        .rd-table { background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; flex: 1; min-width: 0; }
+        .rd-table-head { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .rd-table-name { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 800; color: var(--orange); }
+        .rd-table-sub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .rd-field { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .rd-field:last-child { border-bottom: none; }
+        .rd-field-name { font-family: 'Courier New', monospace; font-size: 11.5px; color: rgba(255,255,255,0.75); }
+        .rd-field-type { font-family: 'Courier New', monospace; font-size: 10.5px; color: rgba(255,255,255,0.3); margin-left: auto; }
+        .rd-badge-pk  { font-size: 8px; font-weight: 800; background: rgba(240,165,0,0.2);  color: var(--orange); border: 1px solid rgba(240,165,0,0.4);  padding: 1px 5px; border-radius: 3px; flex-shrink:0; }
+        .rd-badge-fk  { font-size: 8px; font-weight: 800; background: rgba(168,85,247,0.15);color: #c084fc;       border: 1px solid rgba(168,85,247,0.3); padding: 1px 5px; border-radius: 3px; flex-shrink:0; }
+        .rd-badge-rel { font-size: 8px; font-weight: 800; background: rgba(34,197,94,0.12); color: #4ade80;       border: 1px solid rgba(34,197,94,0.3);  padding: 1px 5px; border-radius: 3px; flex-shrink:0; }
+        .rd-badge-disc{ font-size: 8px; font-weight: 800; background: rgba(14,165,233,0.15);color: #7dd3fc;       border: 1px solid rgba(14,165,233,0.3); padding: 1px 5px; border-radius: 3px; flex-shrink:0; }
+        .rd-connector { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 18px; gap: 5px; min-width: 110px; }
+        .rd-conn-line { width: 100%; height: 2px; background: rgba(240,165,0,0.35); position: relative; }
+        .rd-conn-line::before { content: ''; position: absolute; left: -4px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+        .rd-conn-line::after  { content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--dark); border: 2px solid rgba(240,165,0,0.4); }
+        .rd-conn-label { font-size: 11px; font-weight: 800; color: var(--orange); background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.3); padding: 4px 12px; border-radius: 6px; white-space: nowrap; }
+        .rd-conn-type  { font-size: 10px; color: rgba(255,255,255,0.3); text-align: center; line-height: 1.5; }
+
+        /* ── ASSOCIATION OBJECT DIAGRAM ── */
+        .assoc-diagram { display: grid; grid-template-columns: 1fr 50px 1fr 50px 1fr; gap: 0; align-items: center; margin: 28px 0; }
+        .ad-table { background: var(--dark); border: 1.5px solid rgba(240,165,0,0.2); border-radius: 12px; overflow: hidden; }
+        .ad-head { background: rgba(240,165,0,0.1); padding: 10px 14px; border-bottom: 1px solid rgba(240,165,0,0.15); }
+        .ad-head-name { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 800; color: var(--orange); }
+        .ad-head-sub  { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .ad-field { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: 'Courier New', monospace; font-size: 11.5px; color: rgba(255,255,255,0.7); }
+        .ad-field:last-child { border-bottom: none; }
+        .ad-arrow { display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(240,165,0,0.5); }
+
+        /* ── SELF-REF TREE DIAGRAM ── */
+        .tree-diagram { background: var(--dark); border-radius: 14px; padding: 28px 32px; margin: 28px 0; }
+        .tree-node { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+        .tree-connector { font-family: 'Courier New', monospace; color: rgba(255,255,255,0.2); font-size: 13px; flex-shrink: 0; }
+        .tree-id { font-family: 'Courier New', monospace; font-size: 11px; background: rgba(240,165,0,0.15); color: var(--orange); border: 1px solid rgba(240,165,0,0.3); padding: 2px 7px; border-radius: 4px; }
+        .tree-name { font-size: 13px; font-weight: 600; color: #fff; }
+        .tree-pid { font-size: 11px; color: rgba(255,255,255,0.3); margin-left: auto; font-family: 'Courier New', monospace; }
+
+        /* ── INHERITANCE COMPARISON ── */
+        .inh-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 28px; }
+        .inh-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .inh-head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .inh-head.stt { background: rgba(59,130,246,0.08); }
+        .inh-head.jtt { background: rgba(34,197,94,0.08); }
+        .inh-head.ctt { background: rgba(168,85,247,0.08); }
+        .inh-type { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+        .inh-head.stt .inh-type { color: #1d4ed8; }
+        .inh-head.jtt .inh-type { color: #166534; }
+        .inh-head.ctt .inh-type { color: #6b21a8; }
+        .inh-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .inh-body { padding: 14px 16px; }
+        .inh-desc { font-size: 12.5px; color: var(--muted); line-height: 1.65; margin-bottom: 10px; }
+        .inh-pros-cons { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+        .ipc-item { font-size: 12px; display: flex; align-items: flex-start; gap: 7px; line-height: 1.5; }
+        .ipc-icon { flex-shrink: 0; margin-top: 2px; }
+
+        /* ── HYBRID PROPERTY FLOW ── */
+        .hyb-flow { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); margin: 24px 0; }
+        .hf-side { overflow: hidden; }
+        .hf-label { padding: 9px 16px; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        .hf-py   .hf-label { background: rgba(192,132,252,0.12); color: #7c3aed; border-bottom: 1px solid rgba(192,132,252,0.2); }
+        .hf-sql  .hf-label { background: rgba(56,189,248,0.1);  color: #0369a1; border-bottom: 1px solid rgba(56,189,248,0.2); }
+        .hf-py .cb, .hf-sql .cb { margin: 0; border-radius: 0; border: none; }
+        .hf-sep { display: flex; align-items: center; justify-content: center; padding: 0 14px; background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+        .hf-sep-label { font-size: 10px; font-weight: 800; color: var(--orange); writing-mode: vertical-rl; letter-spacing: 2px; }
+
+        /* ── CUSTOM TYPE FLOW ── */
+        .ct-flow { display: flex; align-items: center; gap: 0; margin: 24px 0; }
+        .ct-box { flex: 1; background: var(--dark); border-radius: 10px; padding: 16px 20px; text-align: center; }
+        .ct-box-title { font-size: 11px; font-weight: 800; color: var(--orange); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .ct-box-val { font-family: 'Courier New', monospace; font-size: 13px; color: #fff; margin-bottom: 6px; }
+        .ct-box-type { font-size: 10.5px; color: rgba(255,255,255,0.3); }
+        .ct-arrow { padding: 0 10px; text-align: center; }
+        .ct-arrow-line { font-size: 22px; color: var(--orange); display: block; }
+        .ct-arrow-label { font-size: 9px; font-weight: 700; color: var(--orange); letter-spacing: 1px; text-transform: uppercase; display: block; margin-top: 2px; }
+
+        /* ── MODULE FOOTER ── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col { grid-template-columns: 1fr; gap: 40px; }
+            .load-grid, .inh-grid { grid-template-columns: 1fr; }
+            .py-res-compare, .hyb-flow { grid-template-columns: 1fr; }
+            .prc-arrow, .hf-sep { display: none; }
+            .rd-wrap { flex-direction: column; }
+            .rd-connector { flex-direction: row; padding: 16px 0; width: 100%; min-width: unset; }
+            .assoc-diagram { grid-template-columns: 1fr; }
+            .ad-arrow { transform: rotate(90deg); }
+            .ct-flow { flex-direction: column; }
+            .ct-arrow-line { transform: rotate(90deg); }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 580px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="orm-basics.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ORM Basics
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>06</strong></span></div>
+    <a href="query-optimization.html" class="nav-next">
+        Query Optimization
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<!-- ── HERO ── -->
+<header class="mod-hero">
+    <div class="hero-wm">06</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 06</span>
+        </div>
+        <h1 class="mod-title">Advanced<em>ORM Concepts</em></h1>
+        <p class="mod-desc">
+            Go deeper into the ORM. Master every loading strategy, build association objects with
+            extra data on join tables, model hierarchies with self-referential relationships, map
+            class inheritance to your database, and write hybrid properties and custom column types
+            that work seamlessly in both Python and SQL.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Loading Strategies</div>
+            <div class="chip"><div class="chip-dot"></div>Association Objects</div>
+            <div class="chip"><div class="chip-dot"></div>Self-referential</div>
+            <div class="chip"><div class="chip-dot"></div>Inheritance Mapping</div>
+            <div class="chip"><div class="chip-dot"></div>Hybrid Properties</div>
+            <div class="chip"><div class="chip-dot"></div>Custom Types</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<!-- ══════════════════════════════════════════
+     PART 1 DIVIDER
+══════════════════════════════════════════ -->
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">Relationships &amp; Associations — Going Deeper</div>
+        <div class="part-desc">Every loading strategy explained, association objects for join tables with extra columns, self-referential relationships for tree structures, and cascade options.</div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 1 — LOADING STRATEGIES
+══════════════════════════════════════════ -->
+<section class="section" id="s1">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 06</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Loading Strategies — Controlling When Related Data is Fetched</h2>
+            <div class="sec-copy">
+                <p>When you access a relationship like <code class="ic">user.orders</code>, SQLAlchemy needs to fetch those related rows from the database. <strong>How and when</strong> it does that is controlled by the loading strategy.</p>
+                <p>Choosing the wrong strategy is one of the most common causes of slow SQLAlchemy applications. Too lazy = many tiny queries. Too eager = huge JOINs you didn't need. Understanding each option lets you match the strategy to the situation.</p>
+                <p>There are 5 strategies: <strong>lazy</strong> (default), <strong>selectin</strong> (recommended for lists), <strong>joined</strong> (best for filters), <strong>subquery</strong> (legacy), and <strong>raise</strong> (for catching accidental lazy loads in production).</p>
+            </div>
+            <div class="callout">
+                <div class="callout-hl">The golden rule</div>
+                <p>The <strong>default is lazy</strong> — each relationship fires a new query the first time you access it. This is fine for 1-2 objects but catastrophic in a loop. Always use <code class="ic">selectinload()</code> or <code class="ic">joinedload()</code> when you know you will access the relationship for multiple objects.</p>
+            </div>
+        </div>
+        <!-- Loading strategy cards -->
+        <div class="reveal">
+            <div class="load-grid">
+                <div class="load-card">
+                    <div class="load-head">
+                        <span class="load-badge lb-lazy">Lazy</span>
+                        <span class="load-name">lazy="select"</span>
+                    </div>
+                    <div class="load-body">
+                        The default. Fires a new SELECT the <em>first time</em> you access the attribute. 0 extra queries if you never touch it, but 1 query per object if you loop.
+                        <div class="load-ex">relationship("Order", lazy="select")</div>
+                        <div class="load-sql-count lsc-ok">N queries in a loop ⚠</div>
+                    </div>
+                </div>
+                <div class="load-card">
+                    <div class="load-head">
+                        <span class="load-badge lb-select">Selectin</span>
+                        <span class="load-name">selectinload()</span>
+                    </div>
+                    <div class="load-body">
+                        <strong>Recommended for collections.</strong> Runs 1 extra SELECT using <code class="ic">WHERE id IN (...)</code>. Loads all children in one go — 2 queries total regardless of how many parents.
+                        <div class="load-ex">.options(selectinload(User.orders))</div>
+                        <div class="load-sql-count lsc-good">2 queries total ✓</div>
+                    </div>
+                </div>
+                <div class="load-card">
+                    <div class="load-head">
+                        <span class="load-badge lb-eager">Joined</span>
+                        <span class="load-name">joinedload()</span>
+                    </div>
+                    <div class="load-body">
+                        Uses a SQL JOIN in the same query. 1 query total. Best when you need to filter by the related model's columns. Can duplicate parent rows — use <code class="ic">.unique()</code>.
+                        <div class="load-ex">.options(joinedload(User.orders))</div>
+                        <div class="load-sql-count lsc-good">1 query total ✓</div>
+                    </div>
+                </div>
+                <div class="load-card">
+                    <div class="load-head">
+                        <span class="load-badge lb-noload">Raise</span>
+                        <span class="load-name">lazy="raise"</span>
+                    </div>
+                    <div class="load-body">
+                        Raises an error if you accidentally access the relationship after the session is closed. Use in production to catch lazy-load bugs before they hit users.
+                        <div class="load-ex">relationship("Order", lazy="raise")</div>
+                        <div class="load-sql-count lsc-good">Catches bugs ✓</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- N+1 visual explained -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:20px">The N+1 Problem — visualised step by step</div>
+        <div style="background:var(--dark);border-radius:14px;padding:28px 32px">
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">What happens when you use lazy loading in a loop with 4 users</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:10px">❌ BAD — 5 queries (1 + 4)</div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:1px;margin-bottom:4px">QUERY 1</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM users</code>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:1px;margin-bottom:4px">QUERY 2 (when accessing user 1's orders)</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM orders WHERE user_id = 1</code>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:1px;margin-bottom:4px">QUERY 3 (when accessing user 2's orders)</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM orders WHERE user_id = 2</code>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:1px;margin-bottom:4px">QUERY 4 + 5 (users 3 and 4)…</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM orders WHERE user_id = 3/4</code>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.4)">With 1,000 users that is 1,001 queries. The database hates you.</div>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#22c55e;margin-bottom:10px">✅ GOOD — 2 queries always</div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;margin-bottom:4px">QUERY 1 — load all users</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM users</code>
+                        </div>
+                        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px">
+                            <div style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;margin-bottom:4px">QUERY 2 — load ALL orders at once (selectinload)</div>
+                            <code style="font-family:'Courier New',monospace;font-size:11.5px;color:#d4d4d4">SELECT * FROM orders<br>WHERE user_id IN (1, 2, 3, 4)</code>
+                        </div>
+                        <div style="background:rgba(34,197,94,0.06);border:1px dashed rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:8px">
+                            <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6">SQLAlchemy now matches each order to its user in Python memory. No more queries. Even 1,000 users = still 2 queries.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading strategy decision matrix -->
+    <div class="reveal" style="margin-top:44px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">Which Loading Strategy Should You Use? — Decision Matrix</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Match your access pattern to the right strategy. Wrong choices are the #1 cause of slow SQLAlchemy apps.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:12px 18px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);width:28%">Your Situation</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(239,68,68,0.04)">lazy="select"</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#78350f;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(240,165,0,0.04)">selectinload()</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#14532d;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(34,197,94,0.04)">joinedload()</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(59,130,246,0.04)">lazy="raise"</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Loading a single object<br><span style="font-weight:400;color:var(--muted);font-size:11.5px">user = session.get(User, 1)</span></td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(239,68,68,0.02)">✅</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(240,165,0,0.02)">⚠️</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(34,197,94,0.02)">✅</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(59,130,246,0.02)">—</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Looping over many objects<br><span style="font-weight:400;color:var(--muted);font-size:11.5px">for user in users: print(user.orders)</span></td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(239,68,68,0.02)">❌ N+1</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(240,165,0,0.02)">✅ Best</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(34,197,94,0.02)">✅</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(59,130,246,0.02)">—</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Filtering by related column<br><span style="font-weight:400;color:var(--muted);font-size:11.5px">.filter(Order.status == "paid")</span></td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(239,68,68,0.02)">❌</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(240,165,0,0.02)">⚠️</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(34,197,94,0.02)">✅ Best</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(59,130,246,0.02)">—</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Session closed after query<br><span style="font-weight:400;color:var(--muted);font-size:11.5px">Returning objects outside the with block</span></td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(239,68,68,0.02)">❌ Error</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(240,165,0,0.02)">✅</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(34,197,94,0.02)">✅</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(59,130,246,0.02)">—</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Production — prevent accidental lazy loads<br><span style="font-weight:400;color:var(--muted);font-size:11.5px">Catch bugs before they reach users</span></td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(239,68,68,0.02)">—</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(240,165,0,0.02)">—</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(34,197,94,0.02)">—</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:18px;background:rgba(59,130,246,0.02)">✅ Best</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted)">✅ = recommended &nbsp;⚠️ = works but not ideal &nbsp;❌ = avoid &nbsp;— = not applicable</div>
+    </div>
+
+    <!-- Loading strategy code -->
+    <div class="reveal" style="margin-top:40px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">LAZY vs SELECTIN vs JOINED</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> selectinload, joinedload
+
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># ── Lazy (default) ── fires 1 query per user!</span>
+    users = session.<span class="cm">execute</span>(<span class="cm">select</span>(<span class="cf">User</span>)).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="ck">for</span> u <span class="ck">in</span> users:
+        <span class="cm">print</span>(u.orders)   <span class="cc"># ← SELECT fired here!</span>
+
+    <span class="cc"># ── selectinload ── 2 queries total, always ──</span>
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">options</span>(<span class="cm">selectinload</span>(<span class="cf">User</span>.orders))
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="ck">for</span> u <span class="ck">in</span> users:
+        <span class="cm">print</span>(u.orders)   <span class="cc"># ← already loaded, no query</span>
+
+    <span class="cc"># ── joinedload ── 1 query with a LEFT JOIN ──</span>
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">options</span>(<span class="cm">joinedload</span>(<span class="cf">User</span>.orders))
+    ).<span class="cm">unique</span>().<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cc"># .unique() needed because JOIN duplicates parent rows</span>
+
+    <span class="cc"># ── Nested eager loading (orders AND their items) ──</span>
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">options</span>(
+            <span class="cm">selectinload</span>(<span class="cf">User</span>.orders).<span class="cm">selectinload</span>(<span class="cf">Order</span>.items)
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SETTING DEFAULT LOADING IN THE MODEL</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> relationship
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+
+    <span class="cc"># Default lazy (fires a query each time)</span>
+    orders_lazy: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Order"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"user"</span>,
+        lazy=<span class="cs">"select"</span>          <span class="cc"># this is the default</span>
+    )
+
+    <span class="cc"># Always eager-load with selectin</span>
+    orders_eager: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Order"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"user"</span>,
+        lazy=<span class="cs">"selectin"</span>        <span class="cc"># always selectin-loaded</span>
+    )
+
+    <span class="cc"># Raise error if accidentally accessed lazily</span>
+    orders_strict: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Order"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"user"</span>,
+        lazy=<span class="cs">"raise"</span>           <span class="cc"># prevents accidental lazy loads</span>
+    )
+
+    <span class="cc"># Write-only — can add but never read (large collections)</span>
+    orders_write: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Order"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"user"</span>,
+        lazy=<span class="cs">"write_only"</span>      <span class="cc"># only for .add() and .remove()</span>
+    )</code></pre>
+                </div>
+                <div class="callout callout-blue" style="margin-top:0">
+                    <div class="callout-hl">When to set default loading in the model</div>
+                    <p>Set <code class="ic">lazy="selectin"</code> on a relationship when you <em>always</em> need the children (e.g. every user needs their role). Prefer query-time loading for everything else — it gives you flexibility.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cascade options -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">Cascade — what happens to children when the parent changes</div>
+        <div class="two-col">
+            <div>
+                <div class="sec-copy">
+                    <p>The <strong>cascade</strong> option controls what happens to related objects when you perform an action on the parent. By default, saving a parent auto-saves new children you've appended (this is called the <code class="ic">save-update</code> cascade). But you can also make SQLAlchemy auto-delete children when you delete the parent — this is <code class="ic">cascade="all, delete-orphan"</code>.</p>
+                    <p>Think of it like this: if you delete a <code class="ic">User</code> row, do you want their <code class="ic">Order</code> rows deleted too? Or do you want the database to refuse the delete because orders still reference the user? Cascade decides this in Python; the foreign key <code class="ic">ondelete</code> decides it in the database.</p>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">CASCADE OPTIONS</span></div>
+                    <pre><code><span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+
+    <span class="cc"># DEFAULT: save-update, merge</span>
+    <span class="cc"># Appending a new order auto-saves it with the user</span>
+    orders_default: ... = <span class="cm">relationship</span>(<span class="cs">"Order"</span>)
+
+    <span class="cc"># delete-orphan: if order removed from list → deleted</span>
+    orders_strict: ... = <span class="cm">relationship</span>(
+        <span class="cs">"Order"</span>,
+        cascade=<span class="cs">"all, delete-orphan"</span>
+    )
+
+<span class="cc"># With delete-orphan:</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    user = session.<span class="cm">get</span>(<span class="cf">User</span>, <span class="cn">1</span>)
+
+    <span class="cc"># Deleting the user also deletes all their orders</span>
+    session.<span class="cm">delete</span>(user)
+    session.<span class="cm">commit</span>()
+    <span class="cc"># DELETE FROM orders WHERE user_id = 1</span>
+    <span class="cc"># DELETE FROM users WHERE id = 1</span>
+
+    <span class="cc"># Removing from list deletes the order row</span>
+    user.orders.<span class="cm">remove</span>(user.orders[<span class="cn">0</span>])
+    session.<span class="cm">commit</span>()
+    <span class="cc"># DELETE FROM orders WHERE id = &lt;that order's id&gt;</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECTION 2 — ASSOCIATION OBJECTS
+══════════════════════════════════════════ -->
+<section class="section" id="s2">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">02 / 06</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Association Objects — Many-to-Many with Extra Data</h2>
+        <div class="sec-copy" style="max-width:720px">
+            <p>In Module 05 we used a plain <code class="ic">Table</code> for many-to-many relationships. That works when the join table only has the two foreign key columns. But what if you need to store <strong>extra information about the connection itself</strong>?</p>
+            <p>For example: a Student can enrol in many Courses, and a Course can have many Students. But you also want to store <em>when</em> the student enrolled and what <em>grade</em> they got. Those pieces of data belong on the join — they are about the connection, not the student or the course alone.</p>
+            <p>When the join table has extra columns, you model it as a <strong>full Python class</strong> — called an <strong>association object</strong>. This is just a normal model that has two foreign keys plus any extra columns you need.</p>
+        </div>
+    </div>
+
+    <!-- Association object diagram -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="assoc-diagram">
+            <div class="ad-table">
+                <div class="ad-head">
+                    <div class="ad-head-name">Student</div>
+                    <div class="ad-head-sub">students table</div>
+                </div>
+                <div class="ad-field"><span class="rd-badge-pk">PK</span> id: int</div>
+                <div class="ad-field"><span style="width:24px"></span> name: str</div>
+                <div class="ad-field"><span style="width:24px"></span> email: str</div>
+                <div class="ad-field"><span class="rd-badge-rel">REL</span> enrolments: List[Enrolment]</div>
+            </div>
+            <div class="ad-arrow">⟷</div>
+            <div class="ad-table" style="border-color:rgba(168,85,247,0.3)">
+                <div class="ad-head" style="background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.2)">
+                    <div class="ad-head-name" style="color:#c084fc">Enrolment</div>
+                    <div class="ad-head-sub">enrolments table — the association object</div>
+                </div>
+                <div class="ad-field"><span class="rd-badge-fk">FK</span> student_id: int</div>
+                <div class="ad-field"><span class="rd-badge-fk">FK</span> course_id: int</div>
+                <div class="ad-field" style="color:rgba(255,255,255,0.5)"><span style="width:24px"></span> enrolled_on: date <span style="font-size:9px;background:rgba(168,85,247,0.15);color:#c084fc;padding:1px 5px;border-radius:3px;margin-left:6px">EXTRA</span></div>
+                <div class="ad-field" style="color:rgba(255,255,255,0.5)"><span style="width:24px"></span> grade: str | None <span style="font-size:9px;background:rgba(168,85,247,0.15);color:#c084fc;padding:1px 5px;border-radius:3px;margin-left:6px">EXTRA</span></div>
+                <div class="ad-field"><span class="rd-badge-rel">REL</span> student: Student</div>
+                <div class="ad-field"><span class="rd-badge-rel">REL</span> course: Course</div>
+            </div>
+            <div class="ad-arrow">⟷</div>
+            <div class="ad-table">
+                <div class="ad-head">
+                    <div class="ad-head-name">Course</div>
+                    <div class="ad-head-sub">courses table</div>
+                </div>
+                <div class="ad-field"><span class="rd-badge-pk">PK</span> id: int</div>
+                <div class="ad-field"><span style="width:24px"></span> title: str</div>
+                <div class="ad-field"><span style="width:24px"></span> credits: int</div>
+                <div class="ad-field"><span class="rd-badge-rel">REL</span> enrolments: List[Enrolment]</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Association object tables visual -->
+    <div class="reveal" style="margin-top:28px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">students</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:160px">
+                    <thead><tr><th class="pk">id</th><th>name</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>Alice</td></tr>
+                        <tr><td>2</td><td>Bob</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">enrolments (association)</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:280px">
+                    <thead><tr><th class="fk">student_id</th><th class="fk">course_id</th><th>enrolled_on</th><th>grade</th></tr></thead>
+                    <tbody>
+                        <tr class="row-hi"><td>1</td><td>1</td><td>2024-09-01</td><td>A</td></tr>
+                        <tr class="row-hi"><td>1</td><td>2</td><td>2024-09-01</td><td><span class="null-val">NULL</span></td></tr>
+                        <tr class="row-blue"><td>2</td><td>1</td><td>2024-09-03</td><td>B+</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">courses</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:180px">
+                    <thead><tr><th class="pk">id</th><th>title</th><th>credits</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>Python 101</td><td>3</td></tr>
+                        <tr><td>2</td><td>SQL Basics</td><td>2</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">Alice is enrolled in both courses — her grade for Python 101 is A, and SQL Basics grade is still pending (NULL). Bob only took Python 101 and got a B+. The <em>enrolments</em> table stores all of this — a plain association table couldn't.</div>
+    </div>
+
+    <!-- Association object code -->
+    <div class="reveal" style="margin-top:32px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">DEFINING THE ASSOCIATION OBJECT</span></div>
+                    <pre><code><span class="ck">from</span> datetime <span class="ck">import</span> date
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> String, Date, ForeignKey
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> (
+    Mapped, mapped_column, relationship, DeclarativeBase
+)
+<span class="ck">from</span> typing <span class="ck">import</span> List, Optional
+
+<span class="ck">class</span> <span class="cf">Base</span>(<span class="cf">DeclarativeBase</span>): <span class="ck">pass</span>
+
+
+<span class="ck">class</span> <span class="cf">Enrolment</span>(<span class="cf">Base</span>):
+    <span class="cc">"The association object — the join table as a full model"</span>
+    __tablename__ = <span class="cs">"enrolments"</span>
+
+    <span class="cc"># Two foreign keys — the join</span>
+    student_id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(
+        <span class="cf">ForeignKey</span>(<span class="cs">"students.id"</span>), primary_key=<span class="ck">True</span>
+    )
+    course_id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(
+        <span class="cf">ForeignKey</span>(<span class="cs">"courses.id"</span>), primary_key=<span class="ck">True</span>
+    )
+
+    <span class="cc"># Extra data about the connection itself</span>
+    enrolled_on: <span class="cf">Mapped</span>[date] = <span class="cm">mapped_column</span>(<span class="cf">Date</span>)
+    grade: <span class="cf">Mapped</span>[Optional[str]] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">5</span>))
+
+    <span class="cc"># Relationships back to both sides</span>
+    student: <span class="cf">Mapped</span>[<span class="cs">"Student"</span>] = <span class="cm">relationship</span>(back_populates=<span class="cs">"enrolments"</span>)
+    course:  <span class="cf">Mapped</span>[<span class="cs">"Course"</span>]  = <span class="cm">relationship</span>(back_populates=<span class="cs">"enrolments"</span>)
+
+
+<span class="ck">class</span> <span class="cf">Student</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"students"</span>
+    id:   <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">100</span>))
+    enrolments: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cf">Enrolment</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"student"</span>
+    )
+
+
+<span class="ck">class</span> <span class="cf">Course</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"courses"</span>
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    title: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">200</span>))
+    enrolments: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cf">Enrolment</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"course"</span>
+    )</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">USING THE ASSOCIATION OBJECT</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    alice  = <span class="cf">Student</span>(name=<span class="cs">"Alice"</span>)
+    python = <span class="cf">Course</span>(title=<span class="cs">"Python 101"</span>)
+    session.<span class="cm">add_all</span>([alice, python])
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># Enrol Alice in the course with extra data</span>
+    enrolment = <span class="cf">Enrolment</span>(
+        student_id  = alice.id,
+        course_id   = python.id,
+        enrolled_on = <span class="cm">date</span>(<span class="cn">2024</span>, <span class="cn">9</span>, <span class="cn">1</span>),
+        grade       = <span class="ck">None</span>       <span class="cc"># not graded yet</span>
+    )
+    session.<span class="cm">add</span>(enrolment)
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># Later: set Alice's grade</span>
+    enr = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">Enrolment</span>).<span class="cm">where</span>(
+            <span class="cf">Enrolment</span>.student_id == alice.id,
+            <span class="cf">Enrolment</span>.course_id  == python.id
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">first</span>()
+    enr.grade = <span class="cs">"A"</span>
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># See all courses Alice is in + her grades</span>
+    <span class="ck">for</span> e <span class="ck">in</span> alice.enrolments:
+        <span class="cm">print</span>(e.course.title, e.grade, e.enrolled_on)</code></pre>
+                </div>
+                <div class="callout callout-purple" style="margin-top:12px">
+                    <div class="callout-hl">Association object vs plain table</div>
+                    <p>Use a plain <code class="ic">Table</code> (Module 05 style) when the join table only has the two foreign keys. Switch to an association object the moment you need any extra column on the join — enrolled_on, grade, quantity, role, status, priority…</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECTION 3 — SELF-REFERENTIAL RELATIONSHIPS
+══════════════════════════════════════════ -->
+<section class="section" id="s3">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">03 / 06</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Self-Referential Relationships — Trees and Hierarchies</h2>
+        <div class="sec-copy" style="max-width:720px">
+            <p>Sometimes rows in a table relate to other rows <strong>in the same table</strong>. This is called a <strong>self-referential relationship</strong>. Classic examples: a category tree (Electronics → Phones → Smartphones), an employee org chart (manager → employee), or threaded comments (comment → replies).</p>
+            <p>The pattern is the same as a regular one-to-many relationship, except the <code class="ic">ForeignKey</code> points back to the same table instead of a different one. The relationship also points to the same model class — written as a string to avoid circular reference issues.</p>
+        </div>
+    </div>
+
+    <!-- Tree diagram visual -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="tree-diagram">
+            <div class="rd-title" style="margin-bottom:18px">Category tree stored in a single "categories" table</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:12px;letter-spacing:1px">DATABASE TABLE — parent_id points to same table</div>
+                    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden">
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;background:rgba(255,255,255,0.06);font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase">
+                            <span>id</span><span>name</span><span>parent_id</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;border-top:1px solid rgba(255,255,255,0.04);font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.75)">
+                            <span style="color:var(--orange)">1</span><span>Electronics</span><span style="color:rgba(255,255,255,0.25);font-style:italic">NULL</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;border-top:1px solid rgba(255,255,255,0.04);font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.75);background:rgba(240,165,0,0.04)">
+                            <span style="color:var(--orange)">2</span><span>Phones</span><span style="color:#c084fc">1</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;border-top:1px solid rgba(255,255,255,0.04);font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.75);background:rgba(240,165,0,0.04)">
+                            <span style="color:var(--orange)">3</span><span>Laptops</span><span style="color:#c084fc">1</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;border-top:1px solid rgba(255,255,255,0.04);font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.75)">
+                            <span style="color:var(--orange)">4</span><span>Smartphones</span><span style="color:#7ec8e3">2</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr 90px;padding:8px 14px;border-top:1px solid rgba(255,255,255,0.04);font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.75)">
+                            <span style="color:var(--orange)">5</span><span>Feature Phones</span><span style="color:#7ec8e3">2</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:12px;letter-spacing:1px">HOW IT LOOKS AS A TREE</div>
+                    <div>
+                        <div class="tree-node"><span class="tree-connector">○</span><span class="tree-id">1</span><span class="tree-name">Electronics</span><span class="tree-pid">parent: —</span></div>
+                        <div class="tree-node" style="padding-left:20px"><span class="tree-connector">├─</span><span class="tree-id">2</span><span class="tree-name">Phones</span><span class="tree-pid">parent: 1</span></div>
+                        <div class="tree-node" style="padding-left:40px"><span class="tree-connector">├─</span><span class="tree-id">4</span><span class="tree-name">Smartphones</span><span class="tree-pid">parent: 2</span></div>
+                        <div class="tree-node" style="padding-left:40px"><span class="tree-connector">└─</span><span class="tree-id">5</span><span class="tree-name">Feature Phones</span><span class="tree-pid">parent: 2</span></div>
+                        <div class="tree-node" style="padding-left:20px"><span class="tree-connector">└─</span><span class="tree-id">3</span><span class="tree-name">Laptops</span><span class="tree-pid">parent: 1</span></div>
+                        <div style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.35);line-height:1.65">Each row has a <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.5)">parent_id</code> that points to the <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.5)">id</code> of another row in the <em>same</em> table. Root nodes have <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.5)">parent_id = NULL</code>.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Self-ref code -->
+    <div class="reveal" style="margin-top:32px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SELF-REFERENTIAL MODEL</span></div>
+                    <pre><code><span class="ck">class</span> <span class="cf">Category</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"categories"</span>
+
+    id:   <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">100</span>))
+
+    <span class="cc"># FK points to the SAME TABLE's id column</span>
+    parent_id: <span class="cf">Mapped</span>[Optional[int]] = <span class="cm">mapped_column</span>(
+        <span class="cf">ForeignKey</span>(<span class="cs">"categories.id"</span>)
+    )
+
+    <span class="cc"># Relationship to children (many)</span>
+    children: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Category"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"parent"</span>,
+        <span class="cc"># remote_side tells SA which side is "one"</span>
+    )
+
+    <span class="cc"># Relationship back to the single parent</span>
+    parent: <span class="cf">Mapped</span>[Optional[<span class="cs">"Category"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"children"</span>,
+        remote_side=<span class="cs">"Category.id"</span>
+    )
+
+    <span class="ck">def</span> <span class="cf">__repr__</span>(self):
+        <span class="ck">return</span> <span class="cs">f"&lt;Category </span>{self.name!r}<span class="cs">&gt;"</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">USING THE TREE</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># Build the tree</span>
+    electronics = <span class="cf">Category</span>(name=<span class="cs">"Electronics"</span>)
+    phones      = <span class="cf">Category</span>(name=<span class="cs">"Phones"</span>)
+    smartphones = <span class="cf">Category</span>(name=<span class="cs">"Smartphones"</span>)
+
+    <span class="cc"># Set the parent-child connections</span>
+    phones.parent      = electronics
+    smartphones.parent = phones
+
+    session.<span class="cm">add</span>(electronics)   <span class="cc"># cascade saves children too</span>
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># Navigate the tree</span>
+    root = session.<span class="cm">get</span>(<span class="cf">Category</span>, electronics.id)
+    <span class="cm">print</span>(root.children)
+    <span class="cc"># → [&lt;Category 'Phones'&gt;]</span>
+
+    <span class="cm">print</span>(root.children[<span class="cn">0</span>].children)
+    <span class="cc"># → [&lt;Category 'Smartphones'&gt;]</span>
+
+    <span class="cm">print</span>(smartphones.parent.name)
+    <span class="cc"># → "Phones"</span>
+
+    <span class="cc"># Find all root categories (no parent)</span>
+    roots = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">Category</span>).<span class="cm">where</span>(
+            <span class="cf">Category</span>.parent_id == <span class="ck">None</span>
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cc"># → [&lt;Category 'Electronics'&gt;]</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECTION 4 — INHERITANCE MAPPING
+══════════════════════════════════════════ -->
+<section class="section" id="s4">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">04 / 06</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Inheritance Mapping — Storing Python Subclasses in the Database</h2>
+        <div class="sec-copy" style="max-width:720px">
+            <p>Python supports class inheritance — you can have a <code class="ic">Vehicle</code> base class and subclasses like <code class="ic">Car</code>, <code class="ic">Truck</code>, and <code class="ic">Motorcycle</code>. Each subclass shares the common fields from Vehicle but adds its own specific fields.</p>
+            <p>SQLAlchemy gives you three strategies to map this inheritance structure to a relational database. Each makes a different trade-off between simplicity and query performance.</p>
+        </div>
+    </div>
+
+    <!-- Three strategies side by side -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="inh-grid">
+            <!-- Single Table -->
+            <div class="inh-card">
+                <div class="inh-head stt">
+                    <div class="inh-type">Strategy 1</div>
+                    <div class="inh-name">Single Table Inheritance</div>
+                </div>
+                <div class="inh-body">
+                    <div class="inh-desc">All classes — parent and all subclasses — stored in <strong>one table</strong>. A special <code class="ic">type</code> column (called the discriminator) says which subclass each row is. Columns belonging to other subclasses are NULL for rows that don't use them.</div>
+                    <div class="inh-pros-cons">
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>Simplest to query — no JOINs</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>Fast reads and writes</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Table gets wide — many NULL columns</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Can't enforce NOT NULL on subclass cols</span></div>
+                    </div>
+                    <div style="margin-top:12px;font-size:11px;font-weight:700;color:#1d4ed8">Best for: small, similar subclasses</div>
+                </div>
+            </div>
+            <!-- Joined Table -->
+            <div class="inh-card">
+                <div class="inh-head jtt">
+                    <div class="inh-type">Strategy 2</div>
+                    <div class="inh-name">Joined Table Inheritance</div>
+                </div>
+                <div class="inh-body">
+                    <div class="inh-desc">The parent class has its own table with the shared fields. Each subclass has its <strong>own separate table</strong> for its specific fields. To get a full object, SQLAlchemy JOINs the two tables together.</div>
+                    <div class="inh-pros-cons">
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>Clean, normalised schema — no NULLs</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>Can enforce constraints per subclass</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Every query requires a JOIN</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Slightly more complex to write</span></div>
+                    </div>
+                    <div style="margin-top:12px;font-size:11px;font-weight:700;color:#166534">Best for: subclasses with many unique fields</div>
+                </div>
+            </div>
+            <!-- Concrete Table -->
+            <div class="inh-card">
+                <div class="inh-head ctt">
+                    <div class="inh-type">Strategy 3</div>
+                    <div class="inh-name">Concrete Table Inheritance</div>
+                </div>
+                <div class="inh-body">
+                    <div class="inh-desc">Each subclass gets its <strong>own completely separate table</strong> with all columns (shared + unique) duplicated. No shared parent table. No JOINs. Querying across all subclasses requires a UNION.</div>
+                    <div class="inh-pros-cons">
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>Fastest for reading one subclass</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#22c55e">✓</span><span>No NULLs, no JOINs</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Schema duplication across tables</span></div>
+                        <div class="ipc-item"><span class="ipc-icon" style="color:#ef4444">✗</span><span>Querying all types requires UNION</span></div>
+                    </div>
+                    <div style="margin-top:12px;font-size:11px;font-weight:700;color:#6b21a8">Best for: very different subtypes, rarely queried together</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STI table visual -->
+    <div class="reveal" style="margin-top:40px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:18px">4.1 — Single Table Inheritance — one table, discriminator column</div>
+        <div class="dbt-wrap">
+            <div class="dbt-head"><span class="dbt-name">vehicles</span><span class="dbt-meta">Single Table — all three types share this one table</span></div>
+            <div class="dbt-scroll"><table class="dbt">
+                <thead><tr><th class="pk">id</th><th class="disc">type ▼ discriminator</th><th>make</th><th>model</th><th>num_doors</th><th>payload_kg</th><th>engine_cc</th></tr></thead>
+                <tbody>
+                    <tr class="row-blue"><td>1</td><td><span class="disc-val">car</span></td><td>Toyota</td><td>Camry</td><td>4</td><td class="null-val">NULL</td><td class="null-val">NULL</td></tr>
+                    <tr class="row-green"><td>2</td><td><span class="disc-val">truck</span></td><td>Ford</td><td>F-150</td><td class="null-val">NULL</td><td>1200</td><td class="null-val">NULL</td></tr>
+                    <tr class="row-purple"><td>3</td><td><span class="disc-val">moto</span></td><td>Honda</td><td>CBR</td><td class="null-val">NULL</td><td class="null-val">NULL</td><td>600</td></tr>
+                    <tr class="row-blue"><td>4</td><td><span class="disc-val">car</span></td><td>Honda</td><td>Civic</td><td>2</td><td class="null-val">NULL</td><td class="null-val">NULL</td></tr>
+                </tbody>
+            </table></div>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:8px">Each subclass-specific column is NULL for rows that belong to other types. The <code class="ic">type</code> column is the discriminator — SQLAlchemy reads it to know which Python class to create.</div>
+
+        <div class="cb" style="margin-top:24px">
+            <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SINGLE TABLE INHERITANCE — code</span></div>
+            <pre><code><span class="ck">class</span> <span class="cf">Vehicle</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"vehicles"</span>
+
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    make:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    model: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+
+    <span class="cc"># This is the magic column — tells SQLAlchemy which subclass each row is</span>
+    type: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">20</span>))
+
+    __mapper_args__ = {
+        <span class="cs">"polymorphic_on"</span>: <span class="cs">"type"</span>,    <span class="cc"># which column is the discriminator</span>
+        <span class="cs">"polymorphic_identity"</span>: <span class="cs">"vehicle"</span>  <span class="cc"># value for base rows</span>
+    }
+
+
+<span class="ck">class</span> <span class="cf">Car</span>(<span class="cf">Vehicle</span>):
+    num_doors: <span class="cf">Mapped</span>[Optional[int]]
+
+    __mapper_args__ = { <span class="cs">"polymorphic_identity"</span>: <span class="cs">"car"</span> }
+    <span class="cc"># No __tablename__ — uses the parent's table ✓</span>
+
+
+<span class="ck">class</span> <span class="cf">Truck</span>(<span class="cf">Vehicle</span>):
+    payload_kg: <span class="cf">Mapped</span>[Optional[int]]
+
+    __mapper_args__ = { <span class="cs">"polymorphic_identity"</span>: <span class="cs">"truck"</span> }
+
+
+<span class="ck">class</span> <span class="cf">Motorcycle</span>(<span class="cf">Vehicle</span>):
+    engine_cc: <span class="cf">Mapped</span>[Optional[int]]
+
+    __mapper_args__ = { <span class="cs">"polymorphic_identity"</span>: <span class="cs">"moto"</span> }
+
+
+<span class="cc"># ── Using it ──</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    session.<span class="cm">add_all</span>([
+        <span class="cf">Car</span>(make=<span class="cs">"Toyota"</span>, model=<span class="cs">"Camry"</span>, num_doors=<span class="cn">4</span>),
+        <span class="cf">Truck</span>(make=<span class="cs">"Ford"</span>, model=<span class="cs">"F-150"</span>, payload_kg=<span class="cn">1200</span>),
+        <span class="cf">Motorcycle</span>(make=<span class="cs">"Honda"</span>, model=<span class="cs">"CBR"</span>, engine_cc=<span class="cn">600</span>),
+    ])
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># Query all vehicles — returns mixed Python types!</span>
+    all_v = session.<span class="cm">execute</span>(<span class="cm">select</span>(<span class="cf">Vehicle</span>)).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cm">print</span>(type(all_v[<span class="cn">0</span>]))  <span class="cc"># → &lt;class 'Car'&gt;</span>
+    <span class="cm">print</span>(type(all_v[<span class="cn">1</span>]))  <span class="cc"># → &lt;class 'Truck'&gt;</span>
+
+    <span class="cc"># Query only cars</span>
+    cars = session.<span class="cm">execute</span>(<span class="cm">select</span>(<span class="cf">Car</span>)).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cm">print</span>(cars[<span class="cn">0</span>].num_doors)  <span class="cc"># → 4</span></code></pre>
+        </div>
+    </div>
+
+    <!-- JTI -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:18px">4.2 — Joined Table Inheritance — parent table + subclass tables</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">vehicles (parent)</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:180px">
+                    <thead><tr><th class="pk">id</th><th class="disc">type</th><th>make</th><th>model</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td><span class="disc-val">car</span></td><td>Toyota</td><td>Camry</td></tr>
+                        <tr><td>2</td><td><span class="disc-val">truck</span></td><td>Ford</td><td>F-150</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">cars (subclass table)</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:180px">
+                    <thead><tr><th class="fk">id (FK)</th><th>num_doors</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>4</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="dbt-wrap" style="margin:0">
+                <div class="dbt-head"><span class="dbt-name">trucks (subclass table)</span></div>
+                <div class="dbt-scroll"><table class="dbt" style="min-width:180px">
+                    <thead><tr><th class="fk">id (FK)</th><th>payload_kg</th></tr></thead>
+                    <tbody>
+                        <tr><td>2</td><td>1200</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:24px">No NULLs — every column has a value. To load a Car, SQLAlchemy JOINs <code class="ic">vehicles</code> + <code class="ic">cars</code> on <code class="ic">cars.id = vehicles.id</code>.</div>
+
+        <div class="cb">
+            <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">JOINED TABLE INHERITANCE — code</span></div>
+            <pre><code><span class="ck">class</span> <span class="cf">Vehicle</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"vehicles"</span>
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    make:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    model: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    type:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">20</span>))
+
+    __mapper_args__ = {
+        <span class="cs">"polymorphic_on"</span>: <span class="cs">"type"</span>,
+        <span class="cs">"polymorphic_identity"</span>: <span class="cs">"vehicle"</span>
+    }
+
+
+<span class="ck">class</span> <span class="cf">Car</span>(<span class="cf">Vehicle</span>):
+    <span class="cc"># ← Has its OWN separate table ← this is the key difference</span>
+    __tablename__ = <span class="cs">"cars"</span>
+
+    <span class="cc"># id is a FK to the parent table — links the two rows</span>
+    id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(<span class="cf">ForeignKey</span>(<span class="cs">"vehicles.id"</span>), primary_key=<span class="ck">True</span>)
+    num_doors: <span class="cf">Mapped</span>[int]
+
+    __mapper_args__ = { <span class="cs">"polymorphic_identity"</span>: <span class="cs">"car"</span> }
+
+
+<span class="ck">class</span> <span class="cf">Truck</span>(<span class="cf">Vehicle</span>):
+    __tablename__ = <span class="cs">"trucks"</span>
+    id: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(<span class="cf">ForeignKey</span>(<span class="cs">"vehicles.id"</span>), primary_key=<span class="ck">True</span>)
+    payload_kg: <span class="cf">Mapped</span>[int]
+
+    __mapper_args__ = { <span class="cs">"polymorphic_identity"</span>: <span class="cs">"truck"</span> }
+
+<span class="cc"># Creating objects is identical — SQLAlchemy writes TWO rows automatically</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    car = <span class="cf">Car</span>(make=<span class="cs">"Toyota"</span>, model=<span class="cs">"Camry"</span>, num_doors=<span class="cn">4</span>)
+    session.<span class="cm">add</span>(car)
+    session.<span class="cm">commit</span>()
+    <span class="cc"># Inserts into vehicles: (id=1, make='Toyota', model='Camry', type='car')</span>
+    <span class="cc"># Inserts into cars:     (id=1, num_doors=4)</span></code></pre>
+        </div>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     PART 2 DIVIDER
+══════════════════════════════════════════ -->
+<div class="part-divider reveal" style="margin-top:0">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">Hybrid Properties &amp; Custom Types</div>
+        <div class="part-desc">Write computed attributes that work both as Python properties and as SQL expressions. Store special data with custom column types that encode/decode automatically.</div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 5 — HYBRID PROPERTIES
+══════════════════════════════════════════ -->
+<section class="section" id="s5">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">05 / 06</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Hybrid Properties — Computed Values in Both Python and SQL</h2>
+        <div class="sec-copy" style="max-width:720px">
+            <p>A <strong>hybrid property</strong> is a computed attribute that works in <em>two different contexts</em>:</p>
+            <p><strong>1. On an object instance</strong> — it runs like a normal Python property: takes <code class="ic">self</code>, accesses other attributes, and returns a computed value. For example, <code class="ic">user.full_name</code> might return <code class="ic">f"{self.first_name} {self.last_name}"</code>.</p>
+            <p><strong>2. In a SQL query</strong> — it produces a SQL expression that the database can evaluate. So you can filter with <code class="ic">.where(User.full_name == "Alice Smith")</code> and SQLAlchemy translates it to SQL: <code class="ic">WHERE first_name || ' ' || last_name = 'Alice Smith'</code>.</p>
+            <p>Without hybrid properties, you would have to duplicate the logic — once as a Python property and once as a raw SQL expression. The hybrid property handles both with a single definition.</p>
+        </div>
+    </div>
+
+    <!-- Hybrid property flow visual -->
+    <div class="reveal" style="margin-top:36px">
+        <div style="background:var(--dark);border-radius:14px;padding:28px 32px">
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">Same property — two contexts</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#c084fc;margin-bottom:12px;letter-spacing:1px">🐍 PYTHON CONTEXT — accesses self</div>
+                    <div style="background:rgba(192,132,252,0.06);border:1px solid rgba(192,132,252,0.15);border-radius:10px;padding:16px 18px">
+                        <code style="font-family:'Courier New',monospace;font-size:12px;color:#d4d4d4;line-height:1.8">user = session.get(User, 1)<br>
+<span style="color:#c084fc">print</span>(user.full_name)<br>
+<span style="color:#6b7280;font-style:italic"># calls the @hybrid_property function</span><br>
+<span style="color:#6b7280;font-style:italic"># → self.first_name + ' ' + self.last_name</span><br>
+<span style="color:#6b7280;font-style:italic"># → "Alice Smith"</span></code>
+                    </div>
+                    <div style="margin-top:10px;font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6">The regular Python property decorator runs and does Python string operations. No SQL involved.</div>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:12px;letter-spacing:1px">🗄️ SQL CONTEXT — produces SQL expression</div>
+                    <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:16px 18px">
+                        <code style="font-family:'Courier New',monospace;font-size:12px;color:#d4d4d4;line-height:1.8">select(User).where(<br>
+&nbsp;&nbsp;<span style="color:var(--orange)">User</span>.full_name == <span style="color:#87c264">"Alice Smith"</span><br>
+)<br>
+<span style="color:#6b7280;font-style:italic">-- calls the @full_name.expression function</span><br>
+<span style="color:#38bdf8">WHERE</span> first_name || <span style="color:#87c264">' '</span> || last_name = <span style="color:#87c264">'Alice Smith'</span></code>
+                    </div>
+                    <div style="margin-top:10px;font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6">The expression variant kicks in and produces SQL. The database evaluates it — not Python.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Example 1 — full_name -->
+    <div class="reveal" style="margin-top:40px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">5.1 — Full name property</div>
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">HYBRID PROPERTY — full_name</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.ext.hybrid <span class="ck">import</span> hybrid_property
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> String
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id:         <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    first_name: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    last_name:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    age:        <span class="cf">Mapped</span>[int]
+
+    <span class="cc"># ── Python instance accessor ──</span>
+    <span class="cm">@hybrid_property</span>
+    <span class="ck">def</span> <span class="cf">full_name</span>(self) -> str:
+        <span class="ck">return</span> <span class="cs">f"</span>{self.first_name}<span class="cs"> </span>{self.last_name}<span class="cs">"</span>
+
+    <span class="cc"># ── SQL expression accessor (used in queries) ──</span>
+    <span class="cm">@full_name.expression</span>
+    <span class="cm">@classmethod</span>
+    <span class="ck">def</span> <span class="cf">full_name</span>(cls):
+        <span class="cc"># Returns a SQL expression — database does the work</span>
+        <span class="ck">return</span> cls.first_name + <span class="cs">" "</span> + cls.last_name
+
+    <span class="cc"># ── Setter — allows user.full_name = "Bob Jones" ──</span>
+    <span class="cm">@full_name.setter</span>
+    <span class="ck">def</span> <span class="cf">full_name</span>(self, value: str):
+        parts = value.<span class="cm">split</span>(<span class="cs">" "</span>, <span class="cn">1</span>)
+        self.first_name = parts[<span class="cn">0</span>]
+        self.last_name  = parts[<span class="cn">1</span>] <span class="ck">if</span> <span class="cm">len</span>(parts) > <span class="cn">1</span> <span class="ck">else</span> <span class="cs">""</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">USING THE HYBRID PROPERTY</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># ── Python context: access on an object ──</span>
+    user = session.<span class="cm">get</span>(<span class="cf">User</span>, <span class="cn">1</span>)
+    <span class="cm">print</span>(user.full_name)
+    <span class="cc"># → "Alice Smith"  (Python string concatenation)</span>
+
+    <span class="cc"># ── Setter splits the name ──</span>
+    user.full_name = <span class="cs">"Alice Johnson"</span>
+    <span class="cm">print</span>(user.first_name)   <span class="cc"># → "Alice"</span>
+    <span class="cm">print</span>(user.last_name)    <span class="cc"># → "Johnson"</span>
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># ── SQL context: filter with it ──</span>
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(
+            <span class="cf">User</span>.full_name == <span class="cs">"Alice Smith"</span>
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cc"># SQL: WHERE first_name || ' ' || last_name = 'Alice Smith'</span>
+
+    <span class="cc"># ── Filter with LIKE — partial name search ──</span>
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(
+            <span class="cf">User</span>.full_name.<span class="cm">like</span>(<span class="cs">"Alice%"</span>)
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()
+    <span class="cc"># SQL: WHERE (first_name || ' ' || last_name) LIKE 'Alice%'</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Example 2 — is_adult, discount -->
+    <div class="reveal" style="margin-top:40px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">5.2 — Boolean and numeric hybrid properties</div>
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">BOOLEAN HYBRID — is_adult</span></div>
+                    <pre><code><span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id:  <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    age: <span class="cf">Mapped</span>[int]
+
+    <span class="cm">@hybrid_property</span>
+    <span class="ck">def</span> <span class="cf">is_adult</span>(self) -> bool:
+        <span class="ck">return</span> self.age >= <span class="cn">18</span>
+
+    <span class="cm">@is_adult.expression</span>
+    <span class="cm">@classmethod</span>
+    <span class="ck">def</span> <span class="cf">is_adult</span>(cls):
+        <span class="ck">return</span> cls.age >= <span class="cn">18</span>   <span class="cc"># SQL: age >= 18</span>
+
+<span class="cc"># Python:</span>
+user = <span class="cf">User</span>(age=<span class="cn">16</span>)
+<span class="cm">print</span>(user.is_adult)   <span class="cc"># → False</span>
+
+<span class="cc"># SQL: WHERE age >= 18</span>
+adults = session.<span class="cm">execute</span>(
+    <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(<span class="cf">User</span>.is_adult == <span class="ck">True</span>)
+).<span class="cm">scalars</span>().<span class="cm">all</span>()</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">NUMERIC HYBRID — discounted price</span></div>
+                    <pre><code><span class="ck">class</span> <span class="cf">Product</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"products"</span>
+    id:       <span class="cf">Mapped</span>[int]   = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    price:    <span class="cf">Mapped</span>[float]
+    discount: <span class="cf">Mapped</span>[float] <span class="cc"># 0.0 to 1.0 (e.g. 0.2 = 20% off)</span>
+
+    <span class="cm">@hybrid_property</span>
+    <span class="ck">def</span> <span class="cf">sale_price</span>(self) -> float:
+        <span class="ck">return</span> self.price * (<span class="cn">1</span> - self.discount)
+
+    <span class="cm">@sale_price.expression</span>
+    <span class="cm">@classmethod</span>
+    <span class="ck">def</span> <span class="cf">sale_price</span>(cls):
+        <span class="cc"># SQL: price * (1 - discount)</span>
+        <span class="ck">return</span> cls.price * (<span class="cn">1</span> - cls.discount)
+
+<span class="cc"># Python: access on an object</span>
+p = <span class="cf">Product</span>(price=<span class="cn">100</span>, discount=<span class="cn">0.2</span>)
+<span class="cm">print</span>(p.sale_price)  <span class="cc"># → 80.0</span>
+
+<span class="cc"># SQL: find cheap products (after discount)</span>
+cheap = session.<span class="cm">execute</span>(
+    <span class="cm">select</span>(<span class="cf">Product</span>).<span class="cm">where</span>(
+        <span class="cf">Product</span>.sale_price < <span class="cn">50</span>
+    )
+).<span class="cm">scalars</span>().<span class="cm">all</span>()
+<span class="cc"># SQL: WHERE price * (1 - discount) &lt; 50</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hybrid property table visual — filtering effect -->
+    <div class="reveal" style="margin-top:32px">
+        <div style="display:grid;grid-template-columns:1fr 24px 1fr;gap:16px;align-items:start">
+            <div>
+                <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">products table — stored data</div>
+                <div class="dbt-wrap" style="margin:0">
+                    <div class="dbt-head"><span class="dbt-name">products</span></div>
+                    <div class="dbt-scroll"><table class="dbt">
+                        <thead><tr><th class="pk">id</th><th>name</th><th>price</th><th>discount</th></tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td>Laptop</td><td>1000</td><td>0.1</td></tr>
+                            <tr><td>2</td><td>Mouse</td><td>40</td><td>0.25</td></tr>
+                            <tr><td>3</td><td>Keyboard</td><td>80</td><td>0.0</td></tr>
+                            <tr><td>4</td><td>Monitor</td><td>300</td><td>0.5</td></tr>
+                        </tbody>
+                    </table></div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;padding-top:60px;font-size:22px;color:var(--orange)">→</div>
+            <div>
+                <div style="font-size:10px;font-weight:800;color:var(--orange-dark);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">WHERE sale_price &lt; 80 — highlighted rows returned</div>
+                <div class="dbt-wrap" style="margin:0">
+                    <div class="dbt-head"><span class="dbt-name">products — with computed sale_price</span></div>
+                    <div class="dbt-scroll"><table class="dbt">
+                        <thead><tr><th class="pk">id</th><th>name</th><th>price</th><th>discount</th><th>sale_price</th></tr></thead>
+                        <tbody>
+                            <tr style="opacity:0.25"><td>1</td><td>Laptop</td><td>1000</td><td>0.1</td><td>900.00</td></tr>
+                            <tr class="row-hi"><td>2</td><td>Mouse</td><td>40</td><td>0.25</td><td><strong>30.00 ✓</strong></td></tr>
+                            <tr class="row-hi"><td>3</td><td>Keyboard</td><td>80</td><td>0.0</td><td><strong>80.00 ✓</strong></td></tr>
+                            <tr class="row-hi"><td>4</td><td>Monitor</td><td>300</td><td>0.5</td><td><strong>150.00</strong></td></tr>
+                        </tbody>
+                    </table></div>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--muted)">sale_price is NOT a real column — it is computed on the fly by the database from <code class="ic">price * (1 - discount)</code>.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECTION 6 — CUSTOM DATA TYPES
+══════════════════════════════════════════ -->
+<section class="section" id="s6">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">06 / 06</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Custom Data Types — Storing Special Python Objects</h2>
+        <div class="sec-copy" style="max-width:720px">
+            <p>Sometimes the data you want to store is not a simple string or number. You might want to store a <strong>Python dictionary as JSON</strong>, a <strong>comma-separated list as a Python list</strong>, an <strong>enum value</strong>, an <strong>encrypted string</strong>, or a <strong>currency amount</strong> stored as an integer to avoid floating-point errors.</p>
+            <p>SQLAlchemy's <strong>TypeDecorator</strong> lets you define a custom column type that automatically converts the value when reading from or writing to the database. You write once; it works everywhere.</p>
+            <p>The idea: you define <code class="ic">process_bind_param</code> (Python → database, called on INSERT/UPDATE) and <code class="ic">process_result_value</code> (database → Python, called on SELECT). SQLAlchemy calls these automatically.</p>
+        </div>
+    </div>
+
+    <!-- TypeDecorator flow visual -->
+    <div class="reveal" style="margin-top:36px">
+        <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px">How TypeDecorator works — automatic conversion</div>
+        <div class="ct-flow">
+            <div class="ct-box">
+                <div class="ct-box-title">Python Object</div>
+                <div class="ct-box-val">["tag1", "tag2", "tag3"]</div>
+                <div class="ct-box-type">Python list in your code</div>
+            </div>
+            <div class="ct-arrow">
+                <span class="ct-arrow-line">→</span>
+                <span class="ct-arrow-label">INSERT / UPDATE<br>process_bind_param()</span>
+            </div>
+            <div class="ct-box">
+                <div class="ct-box-title">Database Storage</div>
+                <div class="ct-box-val">"tag1,tag2,tag3"</div>
+                <div class="ct-box-type">Simple string stored in DB</div>
+            </div>
+            <div class="ct-arrow">
+                <span class="ct-arrow-line">←</span>
+                <span class="ct-arrow-label">SELECT<br>process_result_value()</span>
+            </div>
+            <div class="ct-box">
+                <div class="ct-box-title">Python Object</div>
+                <div class="ct-box-val">["tag1", "tag2", "tag3"]</div>
+                <div class="ct-box-type">List again in your code</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom type examples -->
+    <div class="reveal" style="margin-top:40px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">6.1 — Storing a Python list as a comma-separated string</div>
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">CUSTOM TYPE — CommaSeparatedList</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> types
+
+<span class="ck">class</span> <span class="cf">CommaSeparatedList</span>(<span class="cf">types</span>.<span class="cf">TypeDecorator</span>):
+    <span class="cs">"""Store a Python list as 'a,b,c' in the database."""</span>
+
+    <span class="cc"># The underlying database type (what column is in the DB)</span>
+    impl = <span class="cf">types</span>.<span class="cf">String</span>
+
+    <span class="cc"># Ensure strings are compared correctly</span>
+    cache_ok = <span class="ck">True</span>
+
+    <span class="cc"># Python → Database: called on INSERT / UPDATE</span>
+    <span class="ck">def</span> <span class="cf">process_bind_param</span>(self, value, dialect):
+        <span class="ck">if</span> value <span class="ck">is None</span>:
+            <span class="ck">return</span> <span class="ck">None</span>
+        <span class="ck">return</span> <span class="cs">","</span>.<span class="cm">join</span>(value)    <span class="cc"># ["a","b"] → "a,b"</span>
+
+    <span class="cc"># Database → Python: called on SELECT</span>
+    <span class="ck">def</span> <span class="cf">process_result_value</span>(self, value, dialect):
+        <span class="ck">if</span> <span class="ck">not</span> value:
+            <span class="ck">return</span> []
+        <span class="ck">return</span> value.<span class="cm">split</span>(<span class="cs">","</span>)   <span class="cc"># "a,b" → ["a","b"]</span>
+
+
+<span class="cc"># Use it in a model just like any built-in type</span>
+<span class="ck">class</span> <span class="cf">Article</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"articles"</span>
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    title: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">200</span>))
+
+    <span class="cc"># Tags stored as "python,orm,sqlalchemy" in DB</span>
+    <span class="cc"># but returned as ["python", "orm", "sqlalchemy"] in Python</span>
+    tags: <span class="cf">Mapped</span>[list] = <span class="cm">mapped_column</span>(<span class="cf">CommaSeparatedList</span>())</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">USING IT — seamless Python lists</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># Write — give it a Python list</span>
+    article = <span class="cf">Article</span>(
+        title = <span class="cs">"SQLAlchemy Guide"</span>,
+        tags  = [<span class="cs">"python"</span>, <span class="cs">"orm"</span>, <span class="cs">"database"</span>]
+    )
+    session.<span class="cm">add</span>(article)
+    session.<span class="cm">commit</span>()
+    <span class="cc"># DB stores: tags = "python,orm,database"</span>
+
+    <span class="cc"># Read — get back a Python list</span>
+    a = session.<span class="cm">get</span>(<span class="cf">Article</span>, article.id)
+    <span class="cm">print</span>(type(a.tags))   <span class="cc"># → &lt;class 'list'&gt;</span>
+    <span class="cm">print</span>(a.tags)         <span class="cc"># → ['python', 'orm', 'database']</span>
+
+    <span class="cc"># Add a tag</span>
+    a.tags.<span class="cm">append</span>(<span class="cs">"tutorial"</span>)
+    session.<span class="cm">commit</span>()
+    <span class="cc"># DB now stores: "python,orm,database,tutorial"</span>
+
+    <span class="cc"># Verify it came back correctly</span>
+    fresh = session.<span class="cm">get</span>(<span class="cf">Article</span>, article.id)
+    <span class="cm">print</span>(<span class="cs">"tutorial"</span> <span class="ck">in</span> fresh.tags)  <span class="cc"># → True ✓</span></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Before/after table visual -->
+        <div class="reveal" style="margin-top:24px">
+            <div style="display:grid;grid-template-columns:1fr 24px 1fr;gap:16px;align-items:start">
+                <div>
+                    <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">What is stored in the database</div>
+                    <div class="dbt-wrap" style="margin:0">
+                        <div class="dbt-head"><span class="dbt-name">articles — actual DB storage</span></div>
+                        <div class="dbt-scroll"><table class="dbt">
+                            <thead><tr><th class="pk">id</th><th>title</th><th>tags (String column)</th></tr></thead>
+                            <tbody>
+                                <tr><td>1</td><td>SQLAlchemy Guide</td><td>python,orm,database</td></tr>
+                                <tr><td>2</td><td>Python Basics</td><td>python,beginner</td></tr>
+                                <tr><td>3</td><td>No tags article</td><td class="null-val">NULL</td></tr>
+                            </tbody>
+                        </table></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:center;padding-top:60px;font-size:22px;color:var(--orange)">⇔</div>
+                <div>
+                    <div style="font-size:10px;font-weight:800;color:var(--orange-dark);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">What you see in Python</div>
+                    <div style="background:var(--dark);border-radius:12px;overflow:hidden;border:1.5px solid rgba(240,165,0,0.2)">
+                        <div style="background:rgba(240,165,0,0.08);padding:10px 18px;border-bottom:1px solid rgba(240,165,0,0.15);font-size:10px;font-weight:800;color:var(--orange);font-family:'Courier New',monospace;letter-spacing:1px">Python objects after SELECT</div>
+                        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+                            <div style="font-family:'Courier New',monospace;font-size:12.5px;color:#d4d4d4">article1.tags <span style="color:#6b7280">→</span> <span style="color:#87c264">["python", "orm", "database"]</span></div>
+                            <div style="font-family:'Courier New',monospace;font-size:12.5px;color:#d4d4d4">article2.tags <span style="color:#6b7280">→</span> <span style="color:#87c264">["python", "beginner"]</span></div>
+                            <div style="font-family:'Courier New',monospace;font-size:12.5px;color:#d4d4d4">article3.tags <span style="color:#6b7280">→</span> <span style="color:rgba(255,255,255,0.3);font-style:italic">[]</span> <span style="color:#6b7280;font-style:italic"># empty list, not None</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JSON type -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">6.2 — Storing JSON / dicts (built-in + custom)</div>
+        <div class="two-col">
+            <div>
+                <div class="sec-copy">
+                    <p>SQLAlchemy comes with a built-in <code class="ic">JSON</code> type that handles Python dicts and lists automatically. For databases that don't support native JSON (older SQLite), you can use <code class="ic">TypeDecorator</code> to serialise to a text column.</p>
+                    <p>The built-in <code class="ic">JSON</code> is the recommended choice for PostgreSQL (which has a native <code class="ic">jsonb</code> type), MySQL, and modern SQLite. It uses the database's native JSON support when available, falling back to text otherwise.</p>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">JSON TYPE — built-in and custom</span></div>
+                    <pre><code><span class="ck">import</span> json
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> JSON, types
+
+<span class="cc"># ── BUILT-IN JSON type (PostgreSQL / MySQL / SQLite 3.38+)</span>
+<span class="ck">class</span> <span class="cf">UserProfile</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"user_profiles"</span>
+    id:       <span class="cf">Mapped</span>[int]  = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    username: <span class="cf">Mapped</span>[str]  = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">100</span>))
+    metadata: <span class="cf">Mapped</span>[dict] = <span class="cm">mapped_column</span>(<span class="cf">JSON</span>)
+    <span class="cc"># stores dicts directly — Python dict in, dict out</span>
+
+<span class="cc"># Usage:</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    profile = <span class="cf">UserProfile</span>(
+        username=<span class="cs">"alice"</span>,
+        metadata={<span class="cs">"theme"</span>: <span class="cs">"dark"</span>, <span class="cs">"lang"</span>: <span class="cs">"en"</span>, <span class="cs">"notifs"</span>: <span class="ck">True</span>}
+    )
+    session.<span class="cm">add</span>(profile)
+    session.<span class="cm">commit</span>()
+
+    p = session.<span class="cm">get</span>(<span class="cf">UserProfile</span>, profile.id)
+    <span class="cm">print</span>(p.metadata[<span class="cs">"theme"</span>])   <span class="cc"># → "dark"</span>
+
+    <span class="cc"># PostgreSQL JSON path query</span>
+    dark_users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">UserProfile</span>).<span class="cm">where</span>(
+            <span class="cf">UserProfile</span>.metadata[<span class="cs">"theme"</span>].<span class="cm">as_string</span>() == <span class="cs">"dark"</span>
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enum type -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">6.3 — Python Enum types — type-safe status columns</div>
+        <div class="two-col">
+            <div>
+                <div class="sec-copy">
+                    <p>If a column can only hold a fixed set of values (like <code class="ic">"pending"</code>, <code class="ic">"shipped"</code>, <code class="ic">"delivered"</code>) you should use Python's <code class="ic">enum.Enum</code> class instead of plain strings. This gives you:</p>
+                    <p><strong>1. Auto-complete</strong> — your IDE knows the valid values.<br>
+                    <strong>2. Type safety</strong> — you can't accidentally set <code class="ic">"shiped"</code> (typo).<br>
+                    <strong>3. Cleaner code</strong> — compare with <code class="ic">OrderStatus.SHIPPED</code> not <code class="ic">"shipped"</code>.</p>
+                    <p>SQLAlchemy's <code class="ic">Enum</code> type maps directly to a database ENUM (PostgreSQL) or a CHECK constraint (SQLite/MySQL).</p>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">ENUM TYPE</span></div>
+                    <pre><code><span class="ck">import</span> enum
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> Enum <span class="ck">as</span> SAEnum
+
+<span class="cc"># 1. Define the Python enum</span>
+<span class="ck">class</span> <span class="cf">OrderStatus</span>(<span class="cm">enum</span>.<span class="cf">Enum</span>):
+    PENDING   = <span class="cs">"pending"</span>
+    SHIPPED   = <span class="cs">"shipped"</span>
+    DELIVERED = <span class="cs">"delivered"</span>
+    CANCELLED = <span class="cs">"cancelled"</span>
+
+
+<span class="cc"># 2. Use it in a model</span>
+<span class="ck">class</span> <span class="cf">Order</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"orders"</span>
+    id:      <span class="cf">Mapped</span>[int]         = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    product: <span class="cf">Mapped</span>[str]
+    status:  <span class="cf">Mapped</span>[OrderStatus]  = <span class="cm">mapped_column</span>(
+        <span class="cf">SAEnum</span>(<span class="cf">OrderStatus</span>),
+        default=<span class="cf">OrderStatus</span>.<span class="cm">PENDING</span>
+    )
+
+
+<span class="cc"># 3. Use it in code — type-safe ✓</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    order = <span class="cf">Order</span>(product=<span class="cs">"Laptop"</span>)
+    session.<span class="cm">add</span>(order)
+    session.<span class="cm">commit</span>()
+    <span class="cm">print</span>(order.status)          <span class="cc"># → OrderStatus.PENDING</span>
+
+    order.status = <span class="cf">OrderStatus</span>.<span class="cm">SHIPPED</span>
+    session.<span class="cm">commit</span>()
+
+    <span class="cc"># Filter by enum — no magic strings</span>
+    shipped = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">Order</span>).<span class="cm">where</span>(
+            <span class="cf">Order</span>.status == <span class="cf">OrderStatus</span>.<span class="cm">SHIPPED</span>
+        )
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom encrypted type -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">6.4 — Encrypting sensitive data with TypeDecorator</div>
+        <div class="two-col">
+            <div>
+                <div class="sec-copy">
+                    <p>The same <code class="ic">TypeDecorator</code> pattern can be used to <strong>encrypt data before storing</strong> and decrypt it when reading. You write a custom type that encrypts in <code class="ic">process_bind_param</code> and decrypts in <code class="ic">process_result_value</code>. The rest of your code works with plain strings — the encryption is completely transparent.</p>
+                    <p>This is useful for storing things like API keys, tokens, or personal data that you want encrypted at rest in the database. Even if someone reads the raw database, they only see ciphertext.</p>
+                </div>
+                <div class="callout">
+                    <div class="callout-hl">TypeDecorator summary — the pattern</div>
+                    <p><strong>1. impl</strong> — pick the underlying DB column type (String, Integer, etc.)<br>
+                    <strong>2. process_bind_param</strong> — Python → DB (called on write)<br>
+                    <strong>3. process_result_value</strong> — DB → Python (called on read)<br>
+                    <strong>4. cache_ok = True</strong> — always set this for correctness</p>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">ENCRYPTED TYPE — with Fernet (cryptography library)</span></div>
+                    <pre><code><span class="ck">from</span> cryptography.fernet <span class="ck">import</span> Fernet
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> types
+
+<span class="cc"># Generate a key once and store it securely (env var)</span>
+SECRET_KEY = Fernet.<span class="cm">generate_key</span>()
+fernet = <span class="cf">Fernet</span>(SECRET_KEY)
+
+
+<span class="ck">class</span> <span class="cf">EncryptedString</span>(<span class="cf">types</span>.<span class="cf">TypeDecorator</span>):
+    <span class="cs">"""Encrypt on write, decrypt on read — transparent to the model."""</span>
+    impl = <span class="cf">types</span>.<span class="cf">LargeBinary</span>   <span class="cc"># store raw bytes</span>
+    cache_ok = <span class="ck">True</span>
+
+    <span class="ck">def</span> <span class="cf">process_bind_param</span>(self, value, dialect):
+        <span class="ck">if</span> value <span class="ck">is None</span>: <span class="ck">return</span> <span class="ck">None</span>
+        <span class="ck">return</span> fernet.<span class="cm">encrypt</span>(value.<span class="cm">encode</span>())
+
+    <span class="ck">def</span> <span class="cf">process_result_value</span>(self, value, dialect):
+        <span class="ck">if</span> value <span class="ck">is None</span>: <span class="ck">return</span> <span class="ck">None</span>
+        <span class="ck">return</span> fernet.<span class="cm">decrypt</span>(value).<span class="cm">decode</span>()
+
+
+<span class="ck">class</span> <span class="cf">PaymentInfo</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"payment_info"</span>
+    id:          <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    user_id:     <span class="cf">Mapped</span>[int]
+    card_number: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">EncryptedString</span>())
+
+<span class="cc"># Usage — works exactly like a plain string field</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    info = <span class="cf">PaymentInfo</span>(user_id=<span class="cn">1</span>, card_number=<span class="cs">"4111111111111111"</span>)
+    session.<span class="cm">add</span>(info)
+    session.<span class="cm">commit</span>()
+    <span class="cc"># DB stores: encrypted bytes — unreadable without the key</span>
+
+    loaded = session.<span class="cm">get</span>(<span class="cf">PaymentInfo</span>, info.id)
+    <span class="cm">print</span>(loaded.card_number)  <span class="cc"># → "4111111111111111" (decrypted) ✓</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete summary -->
+    <div class="reveal" style="margin-top:52px">
+        <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px">Module Summary — What you learned</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Loading Strategies</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">Lazy is the default but causes N+1 in loops. Use <code class="ic">selectinload()</code> for collections (2 queries total). Use <code class="ic">joinedload()</code> when filtering on the related model. Use <code class="ic">lazy="raise"</code> to catch bugs.</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Association Objects</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">When a many-to-many join table needs extra columns (dates, grades, status), model the join table as a full Python class. Navigate via the association class, not directly.</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Self-referential</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">A FK that points to the same table's PK. Used for trees (categories), org charts (employees), threaded comments. Use <code class="ic">remote_side</code> to tell SQLAlchemy which end is "one".</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Inheritance Mapping</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">STI = one table + discriminator column (simple, wide table). JTI = parent table + subclass tables + JOINs (clean schema). CTI = fully separate tables per subclass (fastest reads, no shared table).</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Hybrid Properties</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">Use <code class="ic">@hybrid_property</code> + <code class="ic">@x.expression</code> for computed values that work both on Python objects (returns value) and in SQL WHERE clauses (returns SQL expression). Add <code class="ic">@x.setter</code> to allow writes.</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:8px">Custom Types</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.65">Subclass <code class="ic">TypeDecorator</code>, set <code class="ic">impl</code>, write <code class="ic">process_bind_param</code> (Python→DB) and <code class="ic">process_result_value</code> (DB→Python). Works for lists, JSON, enums, encryption — anything.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ PART 3 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Model Mixins — Reusable Building Blocks</div>
+        <div class="part-desc">Stop copying the same timestamp and ID fields into every model. Write once, inherit everywhere.</div>
+    </div>
+</div>
+
+<section class="section" id="s7">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">07 / 07</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Mixins — Write Column Logic Once, Use It on Every Model</h2>
+            <div class="sec-copy">
+                <p>Look at any real production codebase and you'll see the same columns on almost every table: <code class="ic">id</code>, <code class="ic">created_at</code>, <code class="ic">updated_at</code>. Copying those three fields into every model is repetitive and error-prone — if you ever want to change the timestamp default, you'd have to touch 20 files.</p>
+                <p>A <strong>mixin</strong> is a plain Python class that holds column definitions but is not itself a database table. You inherit from it in your models, and those columns are automatically added. It's the same idea as a reusable component.</p>
+                <p>Mixins are not a SQLAlchemy-specific concept — they're standard Python multiple inheritance. SQLAlchemy just happens to understand them when combined with <code class="ic">DeclarativeBase</code>.</p>
+            </div>
+            <div class="callout">
+                <div class="callout-hl">One change, all models update</div>
+                <p>If you put <code class="ic">created_at</code> in a mixin and later decide every timestamp should use <code class="ic">timezone=True</code>, you change it in one place and every model that inherits the mixin gets the fix automatically.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:24px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">Without mixin — same code repeated everywhere</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px">
+                        <div style="font-size:10px;font-weight:700;color:#fca5a5;margin-bottom:6px">UserModel</div>
+                        <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5);line-height:1.8">id: UUID<br>created_at<br>updated_at<br>name<br>email</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px">
+                        <div style="font-size:10px;font-weight:700;color:#fca5a5;margin-bottom:6px">ProductModel</div>
+                        <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5);line-height:1.8">id: UUID<br>created_at<br>updated_at<br>name<br>price</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px">
+                        <div style="font-size:10px;font-weight:700;color:#fca5a5;margin-bottom:6px">OrderModel</div>
+                        <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5);line-height:1.8">id: UUID<br>created_at<br>updated_at<br>user_id<br>total</div>
+                    </div>
+                </div>
+                <div style="text-align:center;font-size:11px;color:#fca5a5;margin-bottom:18px">id, created_at, updated_at duplicated 3 times → hard to maintain</div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:14px">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px">With mixins — define once, inherit everywhere</div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px">
+                        <div style="background:rgba(240,165,0,0.12);border:1px solid rgba(240,165,0,0.25);border-radius:8px;padding:10px;flex:1">
+                            <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:5px">UUIDMixin</div>
+                            <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5)">id: UUID</div>
+                        </div>
+                        <div style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:10px;flex:1">
+                            <div style="font-size:10px;font-weight:700;color:#60a5fa;margin-bottom:5px">TimestampMixin</div>
+                            <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5)">created_at<br>updated_at</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;font-size:14px;color:rgba(255,255,255,0.2);margin-bottom:10px">↓ inherit ↓</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px">
+                            <div style="font-size:10px;font-weight:700;color:#4ade80;margin-bottom:5px">UserModel</div>
+                            <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5)">name<br>email</div>
+                        </div>
+                        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px">
+                            <div style="font-size:10px;font-weight:700;color:#4ade80;margin-bottom:5px">ProductModel</div>
+                            <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5)">name<br>price</div>
+                        </div>
+                        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px">
+                            <div style="font-size:10px;font-weight:700;color:#4ade80;margin-bottom:5px">OrderModel</div>
+                            <div style="font-family:'Courier New',monospace;font-size:9.5px;color:rgba(255,255,255,0.5)">user_id<br>total</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;font-size:11px;color:#4ade80;margin-top:10px">Each model gets id + created_at + updated_at for free</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reveal" style="margin-top:40px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">DEFINING MIXINS — mixins.py</span></div>
+                    <pre><code><span class="ck">import</span> uuid
+<span class="ck">from</span> datetime <span class="ck">import</span> datetime
+<span class="ck">from</span> uuid <span class="ck">import</span> UUID
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> func
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> Mapped, mapped_column
+
+
+<span class="ck">class</span> <span class="cf">UUIDPrimaryKeyMixin</span>:
+    <span class="cs">"""Adds a UUID primary key to any model."""</span>
+    id: <span class="cf">Mapped</span>[UUID] = <span class="cm">mapped_column</span>(
+        primary_key=<span class="ck">True</span>,
+        default=uuid.uuid4,
+        nullable=<span class="ck">False</span>
+    )
+
+
+<span class="ck">class</span> <span class="cf">TimestampMixin</span>:
+    <span class="cs">"""Adds created_at and updated_at to any model."""</span>
+    created_at: <span class="cf">Mapped</span>[datetime] = <span class="cm">mapped_column</span>(
+        default=datetime.utcnow,
+        server_default=<span class="cm">func</span>.now(),   <span class="cc"># DB enforces it too</span>
+        nullable=<span class="ck">False</span>
+    )
+    updated_at: <span class="cf">Mapped</span>[datetime] = <span class="cm">mapped_column</span>(
+        default=datetime.utcnow,
+        server_default=<span class="cm">func</span>.now(),
+        onupdate=datetime.utcnow,     <span class="cc"># auto-update on every UPDATE</span>
+        nullable=<span class="ck">False</span>
+    )</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">USING MIXINS IN YOUR MODELS</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> DeclarativeBase, Mapped, mapped_column
+<span class="ck">from</span> myapp.mixins <span class="ck">import</span> UUIDPrimaryKeyMixin, TimestampMixin
+
+<span class="ck">class</span> <span class="cf">Base</span>(<span class="cf">DeclarativeBase</span>): <span class="ck">pass</span>
+
+
+<span class="cc"># Inherit from BOTH mixins + Base</span>
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">UUIDPrimaryKeyMixin</span>, <span class="cf">TimestampMixin</span>, <span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    name:  <span class="cf">Mapped</span>[str]
+    email: <span class="cf">Mapped</span>[str]
+    <span class="cc"># User automatically gets: id, created_at, updated_at</span>
+    <span class="cc"># Final columns: id | name | email | created_at | updated_at</span>
+
+
+<span class="ck">class</span> <span class="cf">Product</span>(<span class="cf">UUIDPrimaryKeyMixin</span>, <span class="cf">TimestampMixin</span>, <span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"products"</span>
+    name:  <span class="cf">Mapped</span>[str]
+    price: <span class="cf">Mapped</span>[float]
+    <span class="cc"># Final columns: id | name | price | created_at | updated_at</span>
+
+
+<span class="cc"># ── Using the mixin columns ──</span>
+user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>, email=<span class="cs">"alice@example.com"</span>)
+<span class="cm">print</span>(user.id)         <span class="cc"># UUID already set — no DB call needed</span>
+<span class="cm">print</span>(user.created_at) <span class="cc"># datetime already set</span>
+
+session.<span class="cm">add</span>(user)
+session.<span class="cm">commit</span>()
+<span class="cc"># The mixin fields are treated exactly like regular columns in queries</span>
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> select
+recent = session.<span class="cm">scalars</span>(
+    <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">order_by</span>(<span class="cf">User</span>.created_at.<span class="cm">desc</span>())
+)</code></pre>
+                </div>
+                <div class="callout callout-green" style="margin-top:12px">
+                    <div class="callout-hl">Mixin vs Abstract Base</div>
+                    <p>A mixin is NOT a table — it has no <code class="ic">__tablename__</code>. An abstract base (with <code class="ic">__abstract__ = True</code>) is similar but is an actual SQLAlchemy base class. For shared columns, mixins are simpler and more flexible.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SOFT DELETE MIXIN ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">Beyond timestamps — other useful mixins</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#f8f8f8"><div style="font-size:12px;font-weight:700;color:var(--dark)">SoftDeleteMixin</div></div>
+                <div style="padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.65">Adds <code class="ic">is_deleted</code> and <code class="ic">deleted_at</code>. Instead of deleting a row, you set <code class="ic">is_deleted = True</code>. The row stays in the DB for audit history.</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#f8f8f8"><div style="font-size:12px;font-weight:700;color:var(--dark)">SlugMixin</div></div>
+                <div style="padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.65">Adds a <code class="ic">slug</code> column used in URLs (e.g. <code class="ic">/blog/my-post-title</code>). Useful for any model that needs human-readable URL paths.</div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#f8f8f8"><div style="font-size:12px;font-weight:700;color:var(--dark)">AuditMixin</div></div>
+                <div style="padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.65">Adds <code class="ic">created_by</code> and <code class="ic">updated_by</code> user IDs. Tracks <em>who</em> made each change — useful for admin panels and compliance.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<!-- ── MODULE FOOTER ── -->
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">Up Next — Module 07</div>
+            <div class="mf-title">Query Optimization <em>&amp; Performance</em></div>
+        </div>
+        <a href="query-optimization.html" class="btn-next">
+            Start Module 07
+            <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const observer = new IntersectionObserver(
+        entries => entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); } }),
+        { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    );
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

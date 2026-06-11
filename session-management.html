@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Management — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ── */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ── */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -60px; top: 50%; transform: translateY(-50%); font-size: clamp(120px, 20vw, 260px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -10px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .mod-title { font-size: clamp(36px, 5.5vw, 68px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── LAYOUT ── */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px, 3vw, 38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* ── CALLOUT ── */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #14532d; }
+        .callout-blue { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl { color: #1d4ed8; }
+        .callout-purple { background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl { color: #581c87; }
+        .callout-red { background: rgba(239,68,68,0.07); border-left-color: var(--red); }
+        .callout-red .callout-hl { color: #7f1d1d; }
+        .callout-teal { background: rgba(20,184,166,0.07); border-left-color: var(--teal); }
+        .callout-teal .callout-hl { color: #0f766e; }
+
+        /* ── CODE BLOCKS ── */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; } .cs { color: #87c264; } .cc { color: #6b7280; font-style: italic; }
+        .cf { color: #F0A500; } .cn { color: #7ec8e3; } .cm { color: #c084fc; } .csql { color: #38bdf8; }
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* ── REVEAL ── */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── PART DIVIDER ── */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* ── DIAG HEADERS ── */
+        .diag-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+        .diag-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+        /* ══ SESSION STATE MACHINE ══ */
+        .state-machine { background: var(--dark); border-radius: 16px; padding: 36px; margin: 36px 0; overflow-x: auto; }
+        .sm-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 28px; }
+        .sm-grid { display: grid; grid-template-columns: 1fr 80px 1fr 80px 1fr 80px 1fr; align-items: center; min-width: 680px; }
+        .sm-state { border-radius: 12px; padding: 18px 16px; text-align: center; }
+        .sm-transient { background: rgba(107,114,128,0.15); border: 1.5px solid rgba(107,114,128,0.3); }
+        .sm-pending   { background: rgba(240,165,0,0.12);   border: 1.5px solid rgba(240,165,0,0.3); }
+        .sm-persistent{ background: rgba(34,197,94,0.12);   border: 1.5px solid rgba(34,197,94,0.3); }
+        .sm-detached  { background: rgba(59,130,246,0.12);  border: 1.5px solid rgba(59,130,246,0.3); }
+        .sm-state-name { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .sn-transient  { color: #9ca3af; }
+        .sn-pending    { color: var(--orange); }
+        .sn-persistent { color: #4ade80; }
+        .sn-detached   { color: #60a5fa; }
+        .sm-state-desc { font-size: 10.5px; color: rgba(255,255,255,0.45); line-height: 1.55; }
+        .sm-arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .sm-arrow-line { flex: 1; height: 2px; width: 100%; background: rgba(255,255,255,0.15); position: relative; }
+        .sm-arrow-line::after { content: '▶'; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); font-size: 8px; color: rgba(255,255,255,0.3); }
+        .sm-arrow-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.35); text-align: center; white-space: nowrap; letter-spacing: 0.5px; }
+        .sm-bottom-row { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 0 16px; min-width: 680px; }
+        .sm-back-arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+        .sm-back-line { width: 100%; height: 2px; background: rgba(59,130,246,0.3); position: relative; }
+        .sm-back-line::before { content: '◀'; position: absolute; left: -5px; top: 50%; transform: translateY(-50%); font-size: 8px; color: rgba(59,130,246,0.5); }
+        .sm-back-label { font-size: 9px; font-weight: 700; color: rgba(59,130,246,0.5); text-align: center; white-space: nowrap; }
+
+        /* ══ LIFECYCLE TIMELINE ══ */
+        .lifecycle { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; overflow-x: auto; }
+        .lc-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .lc-stages { display: flex; align-items: stretch; min-width: 700px; }
+        .lc-stage { flex: 1; display: flex; flex-direction: column; }
+        .lc-stage-head { padding: 10px 14px; border-radius: 8px 8px 0 0; text-align: center; }
+        .lcs-create  { background: rgba(107,114,128,0.2); }
+        .lcs-begin   { background: rgba(59,130,246,0.2); }
+        .lcs-operate { background: rgba(240,165,0,0.2); }
+        .lcs-flush   { background: rgba(168,85,247,0.2); }
+        .lcs-commit  { background: rgba(34,197,94,0.2); }
+        .lcs-close   { background: rgba(239,68,68,0.15); }
+        .lc-stage-num { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        .lc-stage-name { font-size: 11px; font-weight: 700; margin-top: 2px; }
+        .lc-stage-body { flex: 1; border: 1px solid rgba(255,255,255,0.06); border-top: none; padding: 12px 14px; background: rgba(255,255,255,0.02); }
+        .lc-stage-item { font-size: 10.5px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+        .lc-stage-code { font-family: 'Courier New', monospace; font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 8px; display: block; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; }
+        .lc-conn { display: flex; align-items: center; padding-top: 28px; }
+        .lc-conn-line { flex: 1; height: 2px; background: rgba(255,255,255,0.1); position: relative; }
+        .lc-conn-arrow { font-size: 8px; color: rgba(255,255,255,0.2); }
+
+        /* ══ FLUSH vs COMMIT VISUAL ══ */
+        .fvc-grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; background: var(--dark); border-radius: 14px; padding: 28px 24px; margin: 28px 0; overflow: hidden; }
+        .fvc-side { }
+        .fvc-head { font-size: 11px; font-weight: 800; padding: 6px 0; margin-bottom: 14px; letter-spacing: 1px; text-transform: uppercase; }
+        .fvc-head-flush  { color: #c084fc; }
+        .fvc-head-commit { color: #4ade80; }
+        .fvc-step { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+        .fvc-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; margin-top: 1px; }
+        .fvc-dot-p { background: rgba(192,132,252,0.25); color: #c084fc; }
+        .fvc-dot-c { background: rgba(34,197,94,0.25); color: #4ade80; }
+        .fvc-text { font-size: 11.5px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+        .fvc-sep { display: flex; align-items: center; justify-content: center; font-size: 22px; color: rgba(255,255,255,0.15); }
+
+        /* ══ TRANSACTION FLOW ══ */
+        .txn-flow { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; }
+        .tf-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .tf-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; }
+        .tf-node { padding: 10px 20px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center; min-width: 200px; }
+        .tf-begin  { background: rgba(59,130,246,0.15); color: #93c5fd; border: 2px solid rgba(59,130,246,0.35); border-radius: 100px; }
+        .tf-op     { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); border: 1.5px solid rgba(255,255,255,0.1); }
+        .tf-flush  { background: rgba(168,85,247,0.12); color: #c084fc; border: 1.5px solid rgba(168,85,247,0.25); }
+        .tf-decide { background: rgba(240,165,0,0.12); color: var(--orange); border: 2px solid rgba(240,165,0,0.35); }
+        .tf-commit { background: rgba(34,197,94,0.15); color: #4ade80; border: 2px solid rgba(34,197,94,0.35); border-radius: 100px; }
+        .tf-roll   { background: rgba(239,68,68,0.15); color: #fca5a5; border: 2px solid rgba(239,68,68,0.3); border-radius: 100px; }
+        .tf-arrow  { color: rgba(255,255,255,0.2); font-size: 18px; line-height: 1; margin: 3px 0; }
+        .tf-split  { display: flex; gap: 48px; align-items: flex-start; }
+        .tf-branch { display: flex; flex-direction: column; align-items: center; gap: 0; }
+        .tf-blabel { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 4px; margin-bottom: 6px; }
+        .tf-ok     { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .tf-err    { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        .tf-op-list { background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 16px; min-width: 180px; }
+        .tf-op-item { font-size: 11px; color: rgba(255,255,255,0.4); line-height: 1.7; font-family: 'Courier New', monospace; }
+
+        /* ══ SAVEPOINT VISUAL ══ */
+        .savepoint-wrap { background: var(--dark); border-radius: 14px; padding: 28px 32px; margin: 28px 0; }
+        .sp-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; }
+        .sp-track { display: flex; flex-direction: column; gap: 12px; }
+        .sp-row { display: flex; align-items: center; gap: 12px; }
+        .sp-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); width: 120px; flex-shrink: 0; text-align: right; }
+        .sp-line { flex: 1; height: 3px; border-radius: 2px; position: relative; display: flex; align-items: center; }
+        .sp-txn   { background: rgba(59,130,246,0.3); }
+        .sp-inner { background: rgba(240,165,0,0.3); }
+        .sp-marker { width: 12px; height: 12px; border-radius: 50%; position: absolute; top: 50%; transform: translateY(-50%); border: 2px solid var(--dark); }
+        .sp-ok   { background: #22c55e; }
+        .sp-sp   { background: var(--orange); }
+        .sp-roll { background: #ef4444; }
+        .sp-end  { background: #22c55e; }
+        .sp-note { font-size: 10px; color: rgba(255,255,255,0.3); font-style: italic; width: 120px; flex-shrink: 0; }
+
+        /* ══ ISOLATION MATRIX ══ */
+        .iso-level { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 5px; }
+        .il-1 { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        .il-2 { background: rgba(240,165,0,0.15); color: #fbbf24; border: 1px solid rgba(240,165,0,0.3); }
+        .il-3 { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+        .il-4 { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .iso-yes { color: #ef4444; font-weight: 700; font-size: 16px; }
+        .iso-no  { color: #22c55e; font-weight: 700; font-size: 16px; }
+
+        /* ══ CONCURRENCY TIMELINE ══ */
+        .conc-timeline { background: var(--dark); border-radius: 16px; padding: 32px; margin: 28px 0; overflow-x: auto; }
+        .ct-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .ct-body { min-width: 680px; }
+        .ct-header { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+        .ct-col-label { font-size: 11px; font-weight: 800; text-align: center; padding: 8px; border-radius: 6px; }
+        .ct-txn-a { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .ct-txn-b { background: rgba(168,85,247,0.15); color: #c084fc; }
+        .ct-time-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.25); letter-spacing: 2px; text-transform: uppercase; }
+        .ct-row { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 16px; margin-bottom: 8px; align-items: center; }
+        .ct-time { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.25); text-align: right; font-family: 'Courier New', monospace; }
+        .ct-cell { border-radius: 6px; padding: 6px 12px; font-size: 11px; font-family: 'Courier New', monospace; }
+        .ct-cell-empty { background: transparent; }
+        .ct-cell-a { background: rgba(59,130,246,0.1); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
+        .ct-cell-b { background: rgba(168,85,247,0.1); color: #c084fc; border: 1px solid rgba(168,85,247,0.2); }
+        .ct-cell-problem { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+        .ct-cell-ok { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+        .ct-divider { grid-column: 1 / -1; height: 1px; background: rgba(255,255,255,0.05); margin: 6px 0; }
+
+        /* ══ PERF CARDS ══ */
+        .perf-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-top: 28px; }
+        .perf-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .pc-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .pc-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .pc-icon-blue   { background: rgba(59,130,246,0.1); }
+        .pc-icon-green  { background: rgba(34,197,94,0.1); }
+        .pc-icon-purple { background: rgba(168,85,247,0.1); }
+        .pc-icon-orange { background: rgba(240,165,0,0.1); }
+        .pc-icon-teal   { background: rgba(20,184,166,0.1); }
+        .pc-icon-red    { background: rgba(239,68,68,0.1); }
+        .pc-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .pc-body { padding: 14px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+        /* ── MODULE FOOTER ── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col { grid-template-columns: 1fr; gap: 40px; }
+            .perf-grid { grid-template-columns: 1fr; }
+            .sm-grid, .sm-bottom-row, .lc-stages, .ct-body { min-width: 600px; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 580px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="query-optimization.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Query Optimization
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>08</strong></span></div>
+    <a href="alembic-migrations.html" class="nav-next">
+        Alembic Migrations
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">SESSION</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 08</span>
+        </div>
+        <h1 class="mod-title">Session<em>Management</em></h1>
+        <p class="mod-desc">
+            The Session is the heart of SQLAlchemy ORM — every object you read or write passes through it.
+            This module explains exactly what the session does, how transactions work inside it, and
+            how isolation levels control what concurrent connections see of each other's work.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Unit of Work Pattern</div>
+            <div class="chip"><div class="chip-dot"></div>Object States</div>
+            <div class="chip"><div class="chip-dot"></div>Flush vs Commit</div>
+            <div class="chip"><div class="chip-dot"></div>Savepoints</div>
+            <div class="chip"><div class="chip-dot"></div>Isolation Levels</div>
+            <div class="chip"><div class="chip-dot"></div>Concurrency</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<!-- ══ PART 1 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">Understanding the Session Object</div>
+        <div class="part-desc">What the session is, the four states every object passes through, and the difference between flush and commit.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 1 ══ -->
+<section class="section" id="s1">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">The Session — A Smart Buffer Between Python and the Database</h2>
+            <div class="sec-copy">
+                <p>The <strong>Session</strong> is an in-memory workspace. When you load objects, modify them, or create new ones, those changes are recorded in the session first. The session then decides when and how to send those changes to the database — either on the next <code class="ic">flush()</code>, or when you explicitly call <code class="ic">commit()</code>.</p>
+                <p>This design is called the <strong>Unit of Work</strong> pattern. Instead of writing to the database immediately on every change, the session batches all pending changes into a single coordinated transaction. This is safer, faster, and easier to reason about.</p>
+                <p>The session also acts as an <strong>identity map</strong> — if you load the same row twice within a session, you get back the same Python object, not two copies. This prevents inconsistency where two parts of your code hold conflicting versions of the same row.</p>
+            </div>
+            <div class="callout callout-blue">
+                <div class="callout-hl">Session vs Connection vs Engine</div>
+                <p><strong>Engine</strong> — knows how to connect to the database.<br>
+                <strong>Connection</strong> — a raw database connection, one transaction at a time.<br>
+                <strong>Session</strong> — the ORM layer on top. Tracks objects, manages the identity map, and wraps a connection/transaction for you.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">CREATING AND USING A SESSION</span></div>
+                <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> create_engine
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> Session, sessionmaker
+
+engine = <span class="cm">create_engine</span>(<span class="cs">"postgresql://user:pass@localhost/db"</span>)
+
+
+<span class="cc"># ── Pattern 1: context manager (recommended) ──</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>, email=<span class="cs">"alice@co"</span>)
+    session.<span class="cm">add</span>(user)
+    session.<span class="cm">commit</span>()
+<span class="cc"># session automatically closed here</span>
+
+
+<span class="cc"># ── Pattern 2: sessionmaker factory ──</span>
+<span class="cc"># Create the factory once at app startup</span>
+SessionLocal = <span class="cm">sessionmaker</span>(bind=engine)
+
+<span class="cc"># Then use it throughout the app</span>
+<span class="ck">with</span> <span class="cf">SessionLocal</span>() <span class="ck">as</span> session:
+    users = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>)
+    ).<span class="cm">scalars</span>().<span class="cm">all</span>()
+
+
+<span class="cc"># ── Pattern 3: FastAPI / Flask dependency ──</span>
+<span class="ck">def</span> <span class="cf">get_db</span>():
+    db = <span class="cf">SessionLocal</span>()
+    <span class="ck">try</span>:
+        <span class="ck">yield</span> db
+        db.<span class="cm">commit</span>()
+    <span class="ck">except</span> <span class="cf">Exception</span>:
+        db.<span class="cm">rollback</span>()
+        <span class="ck">raise</span>
+    <span class="ck">finally</span>:
+        db.<span class="cm">close</span>()</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 1: Session State Machine ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Object State Machine — The Four States Every ORM Object Passes Through</div>
+        <div class="diag-sub">Every Python object managed by SQLAlchemy is always in exactly one of these four states. Understanding this prevents "DetachedInstanceError" and other common bugs.</div>
+        <div class="state-machine">
+            <div class="sm-title">Object state transitions — triggered by session operations</div>
+            <div class="sm-grid">
+                <div class="sm-state sm-transient">
+                    <div class="sm-state-name sn-transient">TRANSIENT</div>
+                    <div class="sm-state-desc">Object created with <code style="font-size:10px;font-family:'Courier New',monospace;color:rgba(255,255,255,0.6)">User()</code>. Not in any session. Not in the database.</div>
+                </div>
+                <div class="sm-arrow">
+                    <div class="sm-arrow-line"></div>
+                    <div class="sm-arrow-label">session<br>.add(obj)</div>
+                </div>
+                <div class="sm-state sm-pending">
+                    <div class="sm-state-name sn-pending">PENDING</div>
+                    <div class="sm-state-desc">Added to session. Will be INSERTed on next flush. No primary key yet.</div>
+                </div>
+                <div class="sm-arrow">
+                    <div class="sm-arrow-line"></div>
+                    <div class="sm-arrow-label">session<br>.flush() or<br>.commit()</div>
+                </div>
+                <div class="sm-state sm-persistent">
+                    <div class="sm-state-name sn-persistent">PERSISTENT</div>
+                    <div class="sm-state-desc">In session AND in database. Changes are tracked. Has a primary key.</div>
+                </div>
+                <div class="sm-arrow">
+                    <div class="sm-arrow-line"></div>
+                    <div class="sm-arrow-label">session<br>.expunge(obj)<br>or close()</div>
+                </div>
+                <div class="sm-state sm-detached">
+                    <div class="sm-state-name sn-detached">DETACHED</div>
+                    <div class="sm-state-desc">Was in DB (has PK) but no longer in a session. Accessing lazy relationships raises an error.</div>
+                </div>
+            </div>
+            <div class="sm-bottom-row">
+                <div style="width:180px"></div>
+                <div class="sm-back-arrow" style="flex:3">
+                    <div class="sm-back-label">session.add(obj) — re-attach a detached object back to PERSISTENT</div>
+                    <div class="sm-back-line"></div>
+                </div>
+                <div style="width:180px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px;min-width:680px">
+                <div style="background:rgba(107,114,128,0.1);border-radius:7px;padding:8px 12px;font-size:10.5px;color:rgba(255,255,255,0.45)"><strong style="color:#9ca3af">TRANSIENT</strong><br>Check: <code style="font-family:'Courier New',monospace">inspect(obj).transient</code></div>
+                <div style="background:rgba(240,165,0,0.08);border-radius:7px;padding:8px 12px;font-size:10.5px;color:rgba(255,255,255,0.45)"><strong style="color:var(--orange)">PENDING</strong><br>Check: <code style="font-family:'Courier New',monospace">inspect(obj).pending</code></div>
+                <div style="background:rgba(34,197,94,0.08);border-radius:7px;padding:8px 12px;font-size:10.5px;color:rgba(255,255,255,0.45)"><strong style="color:#4ade80">PERSISTENT</strong><br>Check: <code style="font-family:'Courier New',monospace">inspect(obj).persistent</code></div>
+                <div style="background:rgba(59,130,246,0.08);border-radius:7px;padding:8px 12px;font-size:10.5px;color:rgba(255,255,255,0.45)"><strong style="color:#60a5fa">DETACHED</strong><br>Check: <code style="font-family:'Courier New',monospace">inspect(obj).detached</code></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 2: Session Lifecycle Timeline ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Session Lifecycle — From Creation to Close</div>
+        <div class="diag-sub">A session moves through six distinct stages during a typical request. Each stage has clear responsibilities.</div>
+        <div class="lifecycle">
+            <div class="lc-title">Session stages during a typical web request</div>
+            <div class="lc-stages">
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-create">
+                        <div class="lc-stage-num" style="color:#9ca3af">① CREATE</div>
+                        <div class="lc-stage-name" style="color:#d1d5db">Session()</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">Session object created. No DB connection yet — connections are taken from the pool on demand.</div>
+                        <code class="lc-stage-code">Session(engine)</code>
+                    </div>
+                </div>
+                <div class="lc-conn"><div class="lc-conn-line"></div><div class="lc-conn-arrow">▶</div></div>
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-begin">
+                        <div class="lc-stage-num" style="color:#60a5fa">② BEGIN</div>
+                        <div class="lc-stage-name" style="color:#93c5fd">Transaction</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">A transaction starts automatically on first use. No explicit BEGIN needed.</div>
+                        <code class="lc-stage-code">BEGIN (implicit)</code>
+                    </div>
+                </div>
+                <div class="lc-conn"><div class="lc-conn-line"></div><div class="lc-conn-arrow">▶</div></div>
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-operate">
+                        <div class="lc-stage-num" style="color:#fbbf24">③ OPERATE</div>
+                        <div class="lc-stage-name" style="color:#fde68a">Add / Query</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">Add objects, run queries, modify attributes. All tracked in memory.</div>
+                        <code class="lc-stage-code">session.add(obj)<br>session.execute()</code>
+                    </div>
+                </div>
+                <div class="lc-conn"><div class="lc-conn-line"></div><div class="lc-conn-arrow">▶</div></div>
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-flush">
+                        <div class="lc-stage-num" style="color:#c084fc">④ FLUSH</div>
+                        <div class="lc-stage-name" style="color:#e9d5ff">SQL Sent</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">Pending changes sent to DB as SQL. Still inside the transaction — reversible.</div>
+                        <code class="lc-stage-code">flush() [auto or manual]</code>
+                    </div>
+                </div>
+                <div class="lc-conn"><div class="lc-conn-line"></div><div class="lc-conn-arrow">▶</div></div>
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-commit">
+                        <div class="lc-stage-num" style="color:#4ade80">⑤ COMMIT</div>
+                        <div class="lc-stage-name" style="color:#86efac">Persisted</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">Transaction committed. Changes visible to other connections. Cannot be undone.</div>
+                        <code class="lc-stage-code">session.commit()</code>
+                    </div>
+                </div>
+                <div class="lc-conn"><div class="lc-conn-line"></div><div class="lc-conn-arrow">▶</div></div>
+                <div class="lc-stage">
+                    <div class="lc-stage-head lcs-close">
+                        <div class="lc-stage-num" style="color:#fca5a5">⑥ CLOSE</div>
+                        <div class="lc-stage-name" style="color:#fecaca">Released</div>
+                    </div>
+                    <div class="lc-stage-body">
+                        <div class="lc-stage-item">Session closed. Connection returned to pool. All objects become DETACHED.</div>
+                        <code class="lc-stage-code">session.close()</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 3: Flush vs Commit ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">flush() vs commit() — The Most Confusing Distinction</div>
+        <div class="diag-sub">Both send SQL to the database, but they are not the same. Confusing them is the #1 source of "where did my data go?" bugs.</div>
+        <div class="fvc-grid">
+            <div class="fvc-side">
+                <div class="fvc-head fvc-head-flush">flush() — sends SQL, stays in transaction</div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-p">1</div>
+                    <div class="fvc-text">Translates all pending Python changes (INSERT, UPDATE, DELETE) into SQL statements and sends them to the database.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-p">2</div>
+                    <div class="fvc-text">The database executes the SQL <em>inside the current transaction</em> — not yet committed. Other connections cannot see these changes.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-p">3</div>
+                    <div class="fvc-text">The session remains open. You can still add more changes, or call <code style="font-family:'Courier New',monospace;font-size:10.5px">rollback()</code> to undo everything flushed so far.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-p">4</div>
+                    <div class="fvc-text"><strong style="color:#c084fc">Auto-flush happens</strong> before every query so your queries see the latest state of objects you've already added.</div>
+                </div>
+            </div>
+            <div class="fvc-sep">│</div>
+            <div class="fvc-side">
+                <div class="fvc-head fvc-head-commit">commit() — flush + make permanent</div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-c">1</div>
+                    <div class="fvc-text">Calls <code style="font-family:'Courier New',monospace;font-size:10.5px">flush()</code> first — all pending changes are sent to the database.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-c">2</div>
+                    <div class="fvc-text">Commits the transaction to the database. Changes are now <strong style="color:#4ade80">permanent and visible to all other connections</strong>.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-c">3</div>
+                    <div class="fvc-text">The session expires all objects — their attributes will be refreshed from the database on next access to ensure you see fresh data.</div>
+                </div>
+                <div class="fvc-step">
+                    <div class="fvc-dot fvc-dot-c">4</div>
+                    <div class="fvc-text"><strong style="color:#4ade80">Cannot be undone</strong> after commit. If you need to undo, call <code style="font-family:'Courier New',monospace;font-size:10.5px">rollback()</code> before committing.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session code examples -->
+    <div class="reveal" style="margin-top:40px">
+        <div class="two-col">
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">Object state inspection</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Check which state any object is in at runtime using <code class="ic">inspect()</code>.</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">INSPECTING OBJECT STATES</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> inspect
+
+<span class="cc"># TRANSIENT — not in any session</span>
+user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>)
+<span class="cm">print</span>(<span class="cm">inspect</span>(user).transient)   <span class="cc"># True</span>
+
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># PENDING — added, not yet flushed</span>
+    session.<span class="cm">add</span>(user)
+    <span class="cm">print</span>(<span class="cm">inspect</span>(user).pending)    <span class="cc"># True</span>
+    <span class="cm">print</span>(user.id)                  <span class="cc"># None — no PK yet</span>
+
+    <span class="cc"># PERSISTENT — after flush or commit</span>
+    session.<span class="cm">flush</span>()
+    <span class="cm">print</span>(<span class="cm">inspect</span>(user).persistent) <span class="cc"># True</span>
+    <span class="cm">print</span>(user.id)                  <span class="cc"># 1 — PK assigned</span>
+
+    session.<span class="cm">commit</span>()
+    <span class="cm">print</span>(<span class="cm">inspect</span>(user).persistent) <span class="cc"># True</span>
+
+<span class="cc"># DETACHED — session is closed</span>
+<span class="cm">print</span>(<span class="cm">inspect</span>(user).detached)    <span class="cc"># True</span>
+<span class="cm">print</span>(user.id)                    <span class="cc"># 1 — PK still accessible</span>
+<span class="cc"># user.name — OK, not a lazy relationship</span>
+<span class="cc"># user.orders — ❌ DetachedInstanceError!</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">The identity map in action</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Loading the same row twice returns the same Python object — changes are consistent.</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">IDENTITY MAP — SAME OBJECT GUARANTEE</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># Load user with id=1 twice</span>
+    user_a = session.<span class="cm">get</span>(<span class="cf">User</span>, <span class="cn">1</span>)
+    user_b = session.<span class="cm">get</span>(<span class="cf">User</span>, <span class="cn">1</span>)
+
+    <span class="cc"># Same object — no second SQL query!</span>
+    <span class="cm">print</span>(user_a <span class="ck">is</span> user_b)          <span class="cc"># True</span>
+    <span class="cm">print</span>(<span class="cm">id</span>(user_a) == <span class="cm">id</span>(user_b))  <span class="cc"># True</span>
+
+    <span class="cc"># Modify via one reference…</span>
+    user_a.name = <span class="cs">"Alice Updated"</span>
+
+    <span class="cc"># …reflected in the other</span>
+    <span class="cm">print</span>(user_b.name)  <span class="cc"># "Alice Updated"</span>
+
+    <span class="cc"># Expire an object — forces refresh on next access</span>
+    session.<span class="cm">expire</span>(user_a)
+    <span class="cm">print</span>(user_a.name)  <span class="cc"># re-fetches from DB</span>
+
+    <span class="cc"># Refresh now (not lazily)</span>
+    session.<span class="cm">refresh</span>(user_a)
+    <span class="cm">print</span>(user_a.name)  <span class="cc"># fresh from DB</span></code></pre>
+                </div>
+                <div class="callout callout-teal">
+                    <div class="callout-hl">Why the identity map matters</div>
+                    <p>Without it, two parts of your code could load the same user row, modify different attributes, and then commit conflicting states. The identity map guarantees you always work with the same in-memory object.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 2 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">Transaction Management</div>
+        <div class="part-desc">How BEGIN/COMMIT/ROLLBACK work, why ACID properties matter, and how savepoints let you undo part of a transaction.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 2 ══ -->
+<section class="section" id="s2">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">02 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Transactions — All-or-Nothing Database Operations</h2>
+            <div class="sec-copy">
+                <p>A <strong>transaction</strong> groups multiple SQL statements into a single atomic unit. Either all statements succeed and are committed, or the entire group is rolled back as if none of them happened. This is the <strong>A in ACID</strong> — Atomicity.</p>
+                <p>SQLAlchemy begins a transaction automatically the first time you use a session. You don't write <code class="ic">BEGIN</code> explicitly. You close the transaction by calling <code class="ic">commit()</code> (persist changes) or <code class="ic">rollback()</code> (discard changes). After either, the session is ready for the next transaction.</p>
+                <p>When an exception is raised inside a <code class="ic">with Session()</code> block, the context manager calls <code class="ic">rollback()</code> automatically — you never accidentally leave a half-committed transaction open.</p>
+            </div>
+            <div class="callout callout-purple">
+                <div class="callout-hl">ACID — the four transaction guarantees</div>
+                <p>
+                    <strong>Atomic</strong> — all or nothing.<br>
+                    <strong>Consistent</strong> — DB moves from one valid state to another.<br>
+                    <strong>Isolated</strong> — concurrent transactions don't interfere (see Part 3).<br>
+                    <strong>Durable</strong> — committed data survives crashes.
+                </p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">TRANSACTION PATTERNS</span></div>
+                <pre><code><span class="cc"># ── Basic commit and rollback ──</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    <span class="ck">try</span>:
+        user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>)
+        session.<span class="cm">add</span>(user)
+
+        order = <span class="cf">Order</span>(user_id=user.id, product=<span class="cs">"Laptop"</span>)
+        session.<span class="cm">add</span>(order)
+
+        session.<span class="cm">commit</span>()   <span class="cc"># both saved or neither</span>
+    <span class="ck">except</span> <span class="cf">Exception</span>:
+        session.<span class="cm">rollback</span>() <span class="cc"># undo EVERYTHING since last commit</span>
+        <span class="ck">raise</span>
+
+
+<span class="cc"># ── Context manager handles rollback automatically ──</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    <span class="ck">with</span> session.<span class="cm">begin</span>():        <span class="cc"># auto-commits or rolls back</span>
+        session.<span class="cm">add</span>(<span class="cf">User</span>(name=<span class="cs">"Bob"</span>))
+        session.<span class="cm">add</span>(<span class="cf">User</span>(name=<span class="cs">"Carol"</span>))
+    <span class="cc"># commit() called automatically if no exception</span>
+    <span class="cc"># rollback() called automatically on exception</span>
+
+
+<span class="cc"># ── Check transaction state ──</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    session.<span class="cm">add</span>(<span class="cf">User</span>(name=<span class="cs">"Dave"</span>))
+
+    <span class="cc"># True — active transaction with pending changes</span>
+    <span class="cm">print</span>(session.<span class="cm">dirty</span>)         <span class="cc"># set of modified objects</span>
+    <span class="cm">print</span>(session.<span class="cm">new</span>)           <span class="cc"># set of pending objects</span>
+    <span class="cm">print</span>(session.<span class="cm">deleted</span>)       <span class="cc"># set of deleted objects</span>
+    <span class="cm">print</span>(session.<span class="cm">is_active</span>)     <span class="cc"># True</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 4: Transaction Flow ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Transaction Flow — What the Database Sees</div>
+        <div class="diag-sub">The database is only aware of SQL statements. This is what a typical session sends to the database, and the two possible outcomes.</div>
+        <div class="txn-flow">
+            <div class="tf-title">Database-level view of a SQLAlchemy session transaction</div>
+            <div class="tf-wrap">
+                <div class="tf-node tf-begin">BEGIN TRANSACTION</div>
+                <div class="tf-arrow">↓</div>
+                <div class="tf-op-list">
+                    <div class="tf-op-item">INSERT INTO users VALUES (...)</div>
+                    <div class="tf-op-item">SELECT * FROM orders WHERE ...</div>
+                    <div class="tf-op-item">UPDATE users SET name = 'Alice' WHERE id = 1</div>
+                    <div class="tf-op-item">DELETE FROM sessions WHERE expired = true</div>
+                </div>
+                <div class="tf-arrow">↓</div>
+                <div class="tf-node tf-flush">FLUSH — SQL sent but not committed</div>
+                <div class="tf-arrow">↓</div>
+                <div class="tf-node tf-decide">Exception raised? — success or failure?</div>
+                <div class="tf-arrow">↓</div>
+                <div class="tf-split">
+                    <div class="tf-branch">
+                        <span class="tf-blabel tf-ok">NO EXCEPTION</span>
+                        <div class="tf-arrow">↓</div>
+                        <div class="tf-node tf-commit">COMMIT</div>
+                        <div class="tf-arrow">↓</div>
+                        <div style="font-size:11px;color:#4ade80;text-align:center;font-weight:700">Changes permanent<br>Visible to all connections</div>
+                    </div>
+                    <div style="display:flex;align-items:center;font-size:20px;color:rgba(255,255,255,0.1);padding-top:20px">│</div>
+                    <div class="tf-branch">
+                        <span class="tf-blabel tf-err">EXCEPTION</span>
+                        <div class="tf-arrow">↓</div>
+                        <div class="tf-node tf-roll">ROLLBACK</div>
+                        <div class="tf-arrow">↓</div>
+                        <div style="font-size:11px;color:#fca5a5;text-align:center;font-weight:700">All changes undone<br>DB back to previous state</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 5: Savepoints ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Savepoints — Nested Transactions (Partial Rollback)</div>
+        <div class="diag-sub">A savepoint lets you undo part of a transaction without rolling back the entire thing — like a "checkpoint" inside the larger transaction.</div>
+        <div class="savepoint-wrap">
+            <div class="sp-title">Timeline: outer transaction with one savepoint (partial rollback)</div>
+            <div style="display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center;margin-bottom:8px">
+                <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);text-align:right;text-transform:uppercase;letter-spacing:1px">Time →</div>
+                <div style="height:2px;background:rgba(255,255,255,0.1);border-radius:2px;position:relative">
+                    <div style="position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:8px;color:rgba(255,255,255,0.2)">▶</div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+
+                <div style="display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center">
+                    <div style="font-size:11px;font-weight:700;color:#60a5fa;text-align:right">Outer transaction</div>
+                    <div style="position:relative;height:20px">
+                        <div style="position:absolute;left:0;right:0;top:50%;height:3px;background:rgba(59,130,246,0.25);border-radius:2px;transform:translateY(-50%)"></div>
+                        <div style="position:absolute;left:0;top:50%;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid var(--dark);transform:translateY(-50%)"></div>
+                        <div style="position:absolute;left:24%;top:50%;font-size:9px;color:#60a5fa;transform:translateY(-150%);white-space:nowrap">BEGIN</div>
+                        <div style="position:absolute;right:0;top:50%;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid var(--dark);transform:translateY(-50%)"></div>
+                        <div style="position:absolute;right:0;top:50%;font-size:9px;color:#4ade80;transform:translateY(-150%);white-space:nowrap">COMMIT</div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center">
+                    <div style="font-size:11px;font-weight:700;color:var(--orange);text-align:right">Savepoint SP1</div>
+                    <div style="position:relative;height:20px;margin-left:30%">
+                        <div style="position:absolute;left:0;right:35%;top:50%;height:3px;background:rgba(240,165,0,0.25);border-radius:2px;transform:translateY(-50%)"></div>
+                        <div style="position:absolute;left:0;top:50%;width:10px;height:10px;border-radius:50%;background:var(--orange);border:2px solid var(--dark);transform:translateY(-50%)"></div>
+                        <div style="position:absolute;left:0;top:50%;font-size:9px;color:var(--orange);transform:translateY(-150%);white-space:nowrap">SAVEPOINT</div>
+                        <div style="position:absolute;right:35%;top:50%;width:10px;height:10px;border-radius:50%;background:#ef4444;border:2px solid var(--dark);transform:translateY(-50%)"></div>
+                        <div style="position:absolute;right:35%;top:50%;font-size:9px;color:#fca5a5;transform:translateY(-150%);white-space:nowrap">ROLLBACK TO SP1</div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start;margin-top:8px">
+                    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);text-align:right;padding-top:2px">What happened</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:6px 10px;font-size:11px;color:#4ade80">INSERT user ✓ (kept)</div>
+                        <div style="background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.2);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--orange)">SAVEPOINT created</div>
+                        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:6px 10px;font-size:11px;color:#fca5a5">INSERT order ✗ (rolled back)</div>
+                        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:6px 10px;font-size:11px;color:#4ade80">COMMIT (user only)</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="two-col" style="margin-top:28px">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SAVEPOINTS IN SQLAlchemy</span></div>
+                    <pre><code><span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># Start the outer transaction</span>
+    user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>)
+    session.<span class="cm">add</span>(user)
+    session.<span class="cm">flush</span>()        <span class="cc"># user gets its PK</span>
+
+    <span class="cc"># Create a savepoint — point to roll back to</span>
+    <span class="ck">with</span> session.<span class="cm">begin_nested</span>() <span class="ck">as</span> sp:
+        <span class="ck">try</span>:
+            order = <span class="cf">Order</span>(user_id=user.id, amount=<span class="cn">0</span>)
+            session.<span class="cm">add</span>(order)
+            session.<span class="cm">flush</span>()    <span class="cc"># will fail (CHECK constraint)</span>
+        <span class="ck">except</span> <span class="cf">Exception</span>:
+            sp.<span class="cm">rollback</span>()     <span class="cc"># only the order is rolled back</span>
+            <span class="cm">print</span>(<span class="cs">"Order failed, user kept"</span>)
+
+    <span class="cc"># Outer transaction still active — user is intact</span>
+    session.<span class="cm">commit</span>()         <span class="cc"># commits the user, not the order</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">BULK OPERATIONS IN A TRANSACTION</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> select
+
+<span class="cc"># Reading and writing in the same transaction</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+
+    <span class="cc"># Add multiple objects in one go</span>
+    session.<span class="cm">add_all</span>([
+        <span class="cf">User</span>(name=<span class="cs">"Alice"</span>, email=<span class="cs">"a@co"</span>),
+        <span class="cf">User</span>(name=<span class="cs">"Bob"</span>,   email=<span class="cs">"b@co"</span>),
+        <span class="cf">User</span>(name=<span class="cs">"Carol"</span>, email=<span class="cs">"c@co"</span>),
+    ])
+    session.<span class="cm">flush</span>()            <span class="cc"># send INSERTs, stay in txn</span>
+
+    <span class="cc"># Count is visible within this transaction</span>
+    count = session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cm">func</span>.<span class="cm">count</span>()).<span class="cm">select_from</span>(<span class="cf">User</span>)
+    ).<span class="cm">scalar</span>()
+    <span class="cm">print</span>(f<span class="cs">"</span><span class="cn">{count}</span><span class="cs"> users in session"</span>)
+
+    <span class="cc"># Merge (upsert) — insert or update by PK</span>
+    updated = session.<span class="cm">merge</span>(
+        <span class="cf">User</span>(id=<span class="cn">1</span>, name=<span class="cs">"Alice Updated"</span>)
+    )
+    session.<span class="cm">commit</span>()            <span class="cc"># all at once</span></code></pre>
+                </div>
+                <div class="callout callout-green">
+                    <div class="callout-hl">session.merge() — the upsert shortcut</div>
+                    <p>Pass an object with a primary key. If a row with that PK exists, it is updated. If not, it is inserted. This is the ORM equivalent of <code class="ic">INSERT ... ON CONFLICT DO UPDATE</code>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 2B ══ Bulk Operations ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">2B</div>
+    <div>
+        <div class="part-title">Bulk Operations</div>
+        <div class="part-desc">Updating or deleting thousands of rows one object at a time is slow. One SQL statement beats a Python loop every time.</div>
+    </div>
+</div>
+
+<section class="section" id="s-bulk">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">BULK OPS</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Bulk Update, Delete & Insert — One Statement, Not a Loop</h2>
+            <div class="sec-copy">
+                <p>The ORM's default workflow is object-by-object: load a list of objects, change each one, commit. This is clear and readable for a few rows, but at scale it generates one SQL statement per object. <strong>1000 users = 1000 UPDATE statements.</strong></p>
+                <p>Bulk operations send a single SQL statement to the database regardless of how many rows are affected. The database is specifically designed to handle this efficiently — a single <code class="ic">UPDATE ... WHERE id IN (…)</code> is orders of magnitude faster than a loop.</p>
+                <p>The trade-off: bulk operations bypass the ORM's identity map and don't update Python objects that are already loaded in the session. After a bulk update, call <code class="ic">session.expire_all()</code> to make SQLAlchemy reload fresh values on next access.</p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">The loop trap</div>
+                <p>The most common performance mistake in SQLAlchemy: fetching 10,000 rows with <code class="ic">scalars().all()</code> and then looping through them updating each one. This generates 10,001 SQL statements. Use a bulk update instead — it's one statement.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:24px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">Loop vs Bulk — SQL count comparison</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px">
+                        <div style="font-size:11px;font-weight:800;color:#fca5a5;margin-bottom:10px">❌ LOOP (slow)</div>
+                        <div style="font-family:'Courier New',monospace;font-size:10px;color:rgba(255,255,255,0.5);line-height:1.8;margin-bottom:10px">for user in users:<br>&nbsp;&nbsp;user.status = "active"<br>session.commit()</div>
+                        <div style="border-top:1px solid rgba(239,68,68,0.2);padding-top:10px">
+                            <div style="font-size:24px;font-weight:900;color:#ef4444">1001</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">SQL statements<br>(1 SELECT + 1000 UPDATEs)</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:16px">
+                        <div style="font-size:11px;font-weight:800;color:#4ade80;margin-bottom:10px">✅ BULK (fast)</div>
+                        <div style="font-family:'Courier New',monospace;font-size:10px;color:rgba(255,255,255,0.5);line-height:1.8;margin-bottom:10px">session.execute(<br>&nbsp;&nbsp;update(User)<br>&nbsp;&nbsp;.values(status="active")<br>)</div>
+                        <div style="border-top:1px solid rgba(34,197,94,0.2);padding-top:10px">
+                            <div style="font-size:24px;font-weight:900;color:#22c55e">1</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">SQL statement<br>(one UPDATE for all rows)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reveal" style="margin-top:40px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">BULK UPDATE & DELETE</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> update, delete, select
+
+<span class="cc"># ── Bulk UPDATE — set status for a list of IDs ──</span>
+user_ids = [<span class="cn">1</span>, <span class="cn">2</span>, <span class="cn">3</span>, <span class="cn">4</span>, <span class="cn">5</span>]
+session.<span class="cm">execute</span>(
+    <span class="cm">update</span>(<span class="cf">User</span>)
+    .<span class="cm">where</span>(<span class="cf">User</span>.id.<span class="cm">in_</span>(user_ids))
+    .<span class="cm">values</span>(status=<span class="cs">"active"</span>)
+)
+session.<span class="cm">commit</span>()
+<span class="cc"># → UPDATE users SET status='active' WHERE id IN (1,2,3,4,5)</span>
+<span class="cc"># → ONE query, not five</span>
+
+
+<span class="cc"># ── Bulk UPDATE with a WHERE condition ──</span>
+session.<span class="cm">execute</span>(
+    <span class="cm">update</span>(<span class="cf">User</span>)
+    .<span class="cm">where</span>(<span class="cf">User</span>.last_login < <span class="cs">"2023-01-01"</span>)
+    .<span class="cm">values</span>(status=<span class="cs">"inactive"</span>)
+)
+session.<span class="cm">commit</span>()
+
+
+<span class="cc"># ── Bulk DELETE ──</span>
+session.<span class="cm">execute</span>(
+    <span class="cm">delete</span>(<span class="cf">Session</span>)
+    .<span class="cm">where</span>(<span class="cf">Session</span>.expired_at <= <span class="cs">"2024-01-01"</span>)
+)
+session.<span class="cm">commit</span>()
+<span class="cc"># → DELETE FROM sessions WHERE expired_at <= '2024-01-01'</span>
+
+
+<span class="cc"># ── After bulk ops: refresh in-memory objects ──</span>
+session.<span class="cm">expire_all</span>()
+<span class="cc"># Forces SQLAlchemy to reload from DB on next access</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">BULK INSERT — many rows at once</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> insert
+
+<span class="cc"># ── Bulk INSERT — insert many rows with one statement ──</span>
+session.<span class="cm">execute</span>(
+    <span class="cm">insert</span>(<span class="cf">Product</span>),
+    [
+        {<span class="cs">"name"</span>: <span class="cs">"Widget A"</span>, <span class="cs">"price"</span>: <span class="cn">9.99</span>},
+        {<span class="cs">"name"</span>: <span class="cs">"Widget B"</span>, <span class="cs">"price"</span>: <span class="cn">14.99</span>},
+        {<span class="cs">"name"</span>: <span class="cs">"Widget C"</span>, <span class="cs">"price"</span>: <span class="cn">4.99</span>},
+    ]
+)
+session.<span class="cm">commit</span>()
+<span class="cc"># → One executemany() call — much faster than session.add() in a loop</span>
+
+
+<span class="cc"># ── UPSERT — insert, or update if already exists ──</span>
+<span class="ck">from</span> sqlalchemy.dialects.postgresql <span class="ck">import</span> insert <span class="ck">as</span> pg_insert
+
+stmt = <span class="cm">pg_insert</span>(<span class="cf">Product</span>).<span class="cm">values</span>(
+    id=<span class="cn">42</span>, name=<span class="cs">"Widget A"</span>, price=<span class="cn">9.99</span>
+)
+stmt = stmt.<span class="cm">on_conflict_do_update</span>(
+    index_elements=[<span class="cs">"id"</span>],
+    set_={<span class="cs">"price"</span>: stmt.excluded.price}
+)
+session.<span class="cm">execute</span>(stmt)
+session.<span class="cm">commit</span>()
+<span class="cc"># → INSERT ... ON CONFLICT (id) DO UPDATE SET price = excluded.price</span></code></pre>
+                </div>
+                <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-top:14px">
+                    <div style="padding:10px 16px;background:#f8f8f8;border-bottom:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">All four bulk operations</div></div>
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead><tr style="background:#f8f8f8"><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">Operation</th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">SQLAlchemy</th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">SQL generated</th></tr></thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Bulk update</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--orange-dark)">update(M).where().values()</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">UPDATE … SET … WHERE</td></tr>
+                            <tr style="border-bottom:1px solid var(--border);background:#fafafa"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Bulk delete</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--orange-dark)">delete(M).where()</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">DELETE FROM … WHERE</td></tr>
+                            <tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Bulk insert</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--orange-dark)">insert(M), [list of dicts]</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">executemany INSERT</td></tr>
+                            <tr><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Upsert</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--orange-dark)">on_conflict_do_update()</td><td style="padding:8px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">INSERT … ON CONFLICT</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ PART 3 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Concurrency and Isolation Levels</div>
+        <div class="part-desc">How the database controls what concurrent transactions see of each other — and how to set the right isolation level for your use case.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 3 ══ -->
+<section class="section" id="s3">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Isolation Levels — What Concurrent Transactions Can See</h2>
+            <div class="sec-copy">
+                <p>When two transactions run at the same time, the database must decide whether Transaction A can see uncommitted changes from Transaction B. This is controlled by the <strong>isolation level</strong>.</p>
+                <p>Higher isolation means stronger consistency guarantees but <strong>lower concurrency</strong> — the database must do more locking. Lower isolation allows more parallelism but risks <strong>concurrency anomalies</strong>: dirty reads, non-repeatable reads, and phantom reads.</p>
+                <p>Most applications work well with <code class="ic">READ COMMITTED</code> (the default in PostgreSQL) or <code class="ic">REPEATABLE READ</code> for critical financial operations. <code class="ic">SERIALIZABLE</code> is the safest but slowest.</p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">The three concurrency problems</div>
+                <p>
+                    <strong>Dirty Read</strong> — reading uncommitted data from another transaction.<br>
+                    <strong>Non-Repeatable Read</strong> — same row reads differently twice (another txn updated it between reads).<br>
+                    <strong>Phantom Read</strong> — same query returns different rows twice (another txn inserted/deleted rows).
+                </p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SETTING ISOLATION LEVELS</span></div>
+                <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> create_engine, text
+
+<span class="cc"># ── Engine-level isolation (default for all sessions) ──</span>
+engine = <span class="cm">create_engine</span>(
+    <span class="cs">"postgresql://user:pass@localhost/db"</span>,
+    isolation_level=<span class="cs">"REPEATABLE READ"</span>
+)
+
+
+<span class="cc"># ── Connection-level (override for one operation) ──</span>
+<span class="ck">with</span> engine.<span class="cm">connect</span>() <span class="ck">as</span> conn:
+    conn = conn.<span class="cm">execution_options</span>(
+        isolation_level=<span class="cs">"SERIALIZABLE"</span>
+    )
+    conn.<span class="cm">execute</span>(...)
+    conn.<span class="cm">commit</span>()
+
+
+<span class="cc"># ── Available isolation level strings ──</span>
+<span class="cc"># "READ UNCOMMITTED"  — lowest,  fastest</span>
+<span class="cc"># "READ COMMITTED"    — default in PostgreSQL</span>
+<span class="cc"># "REPEATABLE READ"   — default in MySQL InnoDB</span>
+<span class="cc"># "SERIALIZABLE"      — highest, safest, slowest</span>
+<span class="cc"># "AUTOCOMMIT"        — no transaction wrapper</span>
+
+
+<span class="cc"># ── Optimistic locking — version column ──</span>
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> Integer, Column
+
+<span class="ck">class</span> <span class="cf">Account</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"accounts"</span>
+    id      = <span class="cf">Column</span>(<span class="cf">Integer</span>, primary_key=<span class="ck">True</span>)
+    balance = <span class="cf">Column</span>(<span class="cf">Integer</span>)
+    version = <span class="cf">Column</span>(<span class="cf">Integer</span>, nullable=<span class="ck">False</span>)
+
+    __mapper_args__ = {
+        <span class="cs">"version_id_col"</span>: version
+    }
+<span class="cc"># SQLAlchemy auto-increments version on update</span>
+<span class="cc"># Raises StaleDataError on concurrent modification</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 6: Isolation Levels Matrix ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Isolation Levels vs Concurrency Problems — Reference Matrix</div>
+        <div class="diag-sub">Each level adds protection against one more type of anomaly. Choose the lowest level that prevents the problems your application cares about.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:14px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Isolation Level</th>
+                        <th style="padding:14px 20px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Dirty Read</th>
+                        <th style="padding:14px 20px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Non-Repeatable Read</th>
+                        <th style="padding:14px 20px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Phantom Read</th>
+                        <th style="padding:14px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Use When</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:14px 20px"><span class="iso-level il-1">READ UNCOMMITTED</span></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;font-size:12.5px;color:var(--muted)">Analytics where stale reads are acceptable. Rarely used.</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:14px 20px"><span class="iso-level il-2">READ COMMITTED</span><div style="font-size:10px;color:var(--muted);margin-top:4px">Default in PostgreSQL</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;font-size:12.5px;color:var(--muted)">Most web applications. Good balance of safety and performance.</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:14px 20px"><span class="iso-level il-3">REPEATABLE READ</span><div style="font-size:10px;color:var(--muted);margin-top:4px">Default in MySQL</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-yes">✗</span><div style="font-size:10px;color:#ef4444;margin-top:2px">possible</div></td>
+                        <td style="padding:14px 20px;font-size:12.5px;color:var(--muted)">Reports, data exports — need consistent view of data throughout the transaction.</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:14px 20px"><span class="iso-level il-4">SERIALIZABLE</span></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;text-align:center"><span class="iso-no">✓</span><div style="font-size:10px;color:#22c55e;margin-top:2px">prevented</div></td>
+                        <td style="padding:14px 20px;font-size:12.5px;color:var(--muted)">Financial transactions, inventory management — full correctness required.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 7: Concurrency Problem Timeline ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Concurrency Problems — Two Transactions, Three Scenarios</div>
+        <div class="diag-sub">These timelines show what goes wrong without proper isolation. Each anomaly is prevented by a specific isolation level.</div>
+
+        <!-- Dirty Read -->
+        <div style="margin-bottom:28px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <span style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);font-size:11px;font-weight:800;padding:4px 12px;border-radius:5px;text-transform:uppercase;letter-spacing:0.5px">Scenario 1 — Dirty Read</span>
+                <span style="font-size:12px;color:var(--muted)">Prevented by: READ COMMITTED and above</span>
+            </div>
+            <div class="conc-timeline">
+                <div class="ct-title">Dirty Read — Transaction A reads uncommitted data from Transaction B</div>
+                <div class="ct-body">
+                    <div class="ct-header">
+                        <div class="ct-time-label">Time</div>
+                        <div class="ct-col-label ct-txn-a">Transaction A (reads)</div>
+                        <div class="ct-col-label ct-txn-b">Transaction B (writes)</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T1</div>
+                        <div class="ct-cell ct-cell-a">BEGIN</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T2</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                        <div class="ct-cell ct-cell-b">BEGIN<br>UPDATE balance = 500 WHERE id=1</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T3</div>
+                        <div class="ct-cell ct-cell-problem">SELECT balance WHERE id=1<br>→ reads 500 ⚠️ (not committed!)</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T4</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                        <div class="ct-cell ct-cell-b">ROLLBACK (balance stays 200)</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T5</div>
+                        <div class="ct-cell ct-cell-problem">Txn A used balance=500<br>— it never existed in the DB!</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Non-Repeatable Read -->
+        <div style="margin-bottom:28px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <span style="background:rgba(240,165,0,0.15);color:#fbbf24;border:1px solid rgba(240,165,0,0.3);font-size:11px;font-weight:800;padding:4px 12px;border-radius:5px;text-transform:uppercase;letter-spacing:0.5px">Scenario 2 — Non-Repeatable Read</span>
+                <span style="font-size:12px;color:var(--muted)">Prevented by: REPEATABLE READ and above</span>
+            </div>
+            <div class="conc-timeline">
+                <div class="ct-title">Non-Repeatable Read — same row returns different value on second read</div>
+                <div class="ct-body">
+                    <div class="ct-header">
+                        <div class="ct-time-label">Time</div>
+                        <div class="ct-col-label ct-txn-a">Transaction A</div>
+                        <div class="ct-col-label ct-txn-b">Transaction B</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T1</div>
+                        <div class="ct-cell ct-cell-a">BEGIN<br>SELECT balance WHERE id=1<br>→ reads 200</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T2</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                        <div class="ct-cell ct-cell-b">BEGIN<br>UPDATE balance = 800 WHERE id=1<br>COMMIT</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T3</div>
+                        <div class="ct-cell ct-cell-problem">SELECT balance WHERE id=1<br>→ reads 800 ⚠️ (changed!)<br>Same query, different result</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phantom Read -->
+        <div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <span style="background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);font-size:11px;font-weight:800;padding:4px 12px;border-radius:5px;text-transform:uppercase;letter-spacing:0.5px">Scenario 3 — Phantom Read</span>
+                <span style="font-size:12px;color:var(--muted)">Prevented by: SERIALIZABLE only</span>
+            </div>
+            <div class="conc-timeline">
+                <div class="ct-title">Phantom Read — same query returns different rows (rows were inserted/deleted)</div>
+                <div class="ct-body">
+                    <div class="ct-header">
+                        <div class="ct-time-label">Time</div>
+                        <div class="ct-col-label ct-txn-a">Transaction A</div>
+                        <div class="ct-col-label ct-txn-b">Transaction B</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T1</div>
+                        <div class="ct-cell ct-cell-a">BEGIN<br>SELECT * FROM orders WHERE amount > 100<br>→ returns 3 rows</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T2</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                        <div class="ct-cell ct-cell-b">INSERT INTO orders (amount=200)<br>COMMIT</div>
+                    </div>
+                    <div class="ct-row">
+                        <div class="ct-time">T3</div>
+                        <div class="ct-cell ct-cell-problem">SELECT * FROM orders WHERE amount > 100<br>→ returns 4 rows ⚠️ "phantom" appeared<br>Set changed during the transaction</div>
+                        <div class="ct-cell ct-cell-empty"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optimistic vs Pessimistic Locking -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Optimistic vs Pessimistic Locking — Two Approaches to Concurrent Writes</div>
+        <div class="diag-sub">When two users try to update the same row simultaneously, one of them must lose. How they lose is determined by your locking strategy.</div>
+        <div class="perf-grid">
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-green">🔓</div>
+                    <div class="pc-name">Optimistic Locking</div>
+                </div>
+                <div class="pc-body">
+                    Assume conflicts are rare. Let both transactions proceed. When committing, check if anyone else changed the row (using a <code class="ic">version</code> or <code class="ic">updated_at</code> column). If changed, raise an error. Best for high-read, low-conflict workloads (product listings, user profiles).<br><br>
+                    <strong>SQLAlchemy support:</strong> <code class="ic">__mapper_args__ = {"version_id_col": version}</code> — auto-increments on UPDATE, raises <code class="ic">StaleDataError</code> on conflict.
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-red">🔒</div>
+                    <div class="pc-name">Pessimistic Locking</div>
+                </div>
+                <div class="pc-body">
+                    Assume conflicts are likely. Lock the row when you read it so no other transaction can modify it. The second reader blocks until the first commits. Best for inventory counts, bank balances — data that must be strictly serialised.<br><br>
+                    <strong>SQLAlchemy support:</strong> <code class="ic">.with_for_update()</code> adds <code class="ic">SELECT ... FOR UPDATE</code>. The locked row cannot be updated by other transactions until this one commits.
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-blue">📋</div>
+                    <div class="pc-name">SELECT FOR UPDATE</div>
+                </div>
+                <div class="pc-body">
+                    Acquires a write lock on the rows returned by the query. Other transactions trying to update those rows will block. The lock is released on <code class="ic">COMMIT</code> or <code class="ic">ROLLBACK</code>.<br><br>
+                    <code class="ic">session.execute(select(Account).where(Account.id == 1).with_for_update()).scalar_one()</code>
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-orange">⚠️</div>
+                    <div class="pc-name">StaleDataError</div>
+                </div>
+                <div class="pc-body">
+                    Raised by SQLAlchemy's optimistic locking when the version number doesn't match on commit. This means another transaction modified the row between your read and your write. Handle it by retrying the operation with fresh data from the database.<br><br>
+                    <code class="ic">except StaleDataError: session.rollback(); retry()</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Locking code -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">OPTIMISTIC LOCKING — version_id_col</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> Mapped, mapped_column
+<span class="ck">from</span> sqlalchemy.exc <span class="ck">import</span> StaleDataError
+
+<span class="ck">class</span> <span class="cf">Account</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"accounts"</span>
+    id:      <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    balance: <span class="cf">Mapped</span>[int]
+    version: <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(default=<span class="cn">1</span>)
+
+    __mapper_args__ = {<span class="cs">"version_id_col"</span>: version}
+
+<span class="cc"># When two sessions update the same account:</span>
+session_a = <span class="cf">Session</span>(engine)
+session_b = <span class="cf">Session</span>(engine)
+
+acct_a = session_a.<span class="cm">get</span>(<span class="cf">Account</span>, <span class="cn">1</span>)  <span class="cc"># version=1</span>
+acct_b = session_b.<span class="cm">get</span>(<span class="cf">Account</span>, <span class="cn">1</span>)  <span class="cc"># version=1</span>
+
+acct_a.balance += <span class="cn">100</span>
+session_a.<span class="cm">commit</span>()              <span class="cc"># version bumped to 2</span>
+
+acct_b.balance += <span class="cn">50</span>
+<span class="ck">try</span>:
+    session_b.<span class="cm">commit</span>()           <span class="cc"># version mismatch → error!</span>
+<span class="ck">except</span> <span class="cf">StaleDataError</span>:
+    session_b.<span class="cm">rollback</span>()
+    <span class="cm">print</span>(<span class="cs">"Conflict detected — retry"</span>)</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">PESSIMISTIC LOCKING — with_for_update()</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> select
+
+<span class="cc"># Lock the row for the duration of the transaction</span>
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    <span class="ck">with</span> session.<span class="cm">begin</span>():
+
+        <span class="cc"># SELECT balance WHERE id=1 FOR UPDATE</span>
+        acct = session.<span class="cm">execute</span>(
+            <span class="cm">select</span>(<span class="cf">Account</span>)
+            .<span class="cm">where</span>(<span class="cf">Account</span>.id == <span class="cn">1</span>)
+            .<span class="cm">with_for_update</span>()
+        ).<span class="cm">scalar_one</span>()
+
+        <span class="cc"># Row is now locked — other sessions block here</span>
+        acct.balance += <span class="cn">100</span>
+
+    <span class="cc"># Lock released on commit</span>
+    <span class="cc"># Other sessions that were blocked can now proceed</span>
+
+
+<span class="cc"># SKIP LOCKED — skip rows already locked by others</span>
+<span class="cc"># (useful for job queues)</span>
+result = session.<span class="cm">execute</span>(
+    <span class="cm">select</span>(<span class="cf">Job</span>)
+    .<span class="cm">where</span>(<span class="cf">Job</span>.status == <span class="cs">"pending"</span>)
+    .<span class="cm">limit</span>(<span class="cn">1</span>)
+    .<span class="cm">with_for_update</span>(skip_locked=<span class="ck">True</span>)
+)</code></pre>
+                </div>
+                <div class="callout callout-teal">
+                    <div class="callout-hl">skip_locked for job queues</div>
+                    <p>In worker pools, each worker takes a job and locks it. <code class="ic">skip_locked=True</code> makes other workers skip already-locked jobs instead of blocking — they move on to the next available one. This prevents the thundering herd problem.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">Up next — Module 09</div>
+            <div class="mf-title">Alembic <em>Migrations</em></div>
+        </div>
+        <a href="alembic-migrations.html" class="btn-next">
+            Start Module 09
+            <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

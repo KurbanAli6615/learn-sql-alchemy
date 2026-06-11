@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 03: Setting Up SQLAlchemy — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            height: 64px; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 48px;
+            background: rgba(26,28,32,0.97); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(240,165,0,0.12);
+        }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ──────────────────────────────── */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -50px; top: 50%; transform: translateY(-50%); font-size: clamp(160px, 24vw, 300px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -16px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .mod-title { font-size: clamp(38px, 6vw, 72px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3.5px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 560px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── PAGE LAYOUT ───────────────────────── */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px, 3vw, 36px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+        .two-col.flip { direction: rtl; }
+        .two-col.flip > * { direction: ltr; }
+
+        /* callout */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+
+        /* code blocks */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; } .cs { color: #87c264; } .cc { color: #6b7280; font-style: italic; }
+        .cf { color: #F0A500; } .cn { color: #7ec8e3; } .cm { color: #c084fc; }
+
+        /* reveal */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── INSTALL GRID ──────────────────────── */
+        .pkg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+        .pkg-card { background: #fff; border: 1.5px solid var(--border); border-radius: 10px; padding: 15px 18px; }
+        .pkg-name { font-size: 13px; font-weight: 700; color: var(--dark); font-family: 'Courier New', monospace; margin-bottom: 5px; }
+        .pkg-name span { color: var(--orange); }
+        .pkg-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+        /* ── ENGINE DIAGRAM ─────────────────────── */
+        .engine-diagram {
+            display: flex; flex-direction: column; align-items: center; gap: 0;
+        }
+
+        .ed-app {
+            width: 100%;
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: 12px; padding: 14px 20px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .ed-app-icon { width: 32px; height: 32px; background: rgba(240,165,0,0.12); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ed-app-label { font-size: 13px; font-weight: 700; color: var(--dark); }
+        .ed-app-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        .ed-fn-arrow {
+            display: flex; flex-direction: column; align-items: center; padding: 4px 0;
+        }
+        .ed-fn-line { width: 2px; height: 20px; background: var(--orange); }
+        .ed-fn-label { font-size: 11px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--orange); background: rgba(240,165,0,0.1); border: 1px solid rgba(240,165,0,0.3); padding: 3px 10px; border-radius: 4px; margin: 4px 0; white-space: nowrap; }
+        .ed-fn-line2 { width: 2px; height: 20px; background: var(--orange); }
+        .ed-fn-arrow-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--orange); }
+
+        .ed-engine {
+            width: 100%;
+            background: var(--dark); border: 2px solid var(--orange);
+            border-radius: 16px; padding: 20px;
+        }
+        .ed-engine-title { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.35); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+
+        .ed-pool {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 16px;
+        }
+        .ed-pool-title { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
+
+        .ed-slots-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .ed-slot-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.4); min-width: 120px; font-family: 'Courier New', monospace; }
+        .ed-slots { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ed-slot {
+            width: 28px; height: 28px; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 700;
+        }
+        .ed-slot.active { background: rgba(34,197,94,0.25); border: 1.5px solid #22c55e; color: #86efac; }
+        .ed-slot.overflow { background: rgba(240,165,0,0.15); border: 1.5px dashed rgba(240,165,0,0.5); color: #F0A500; }
+
+        .ed-pool-params { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+        .ed-param { display: flex; align-items: flex-start; gap: 10px; }
+        .ed-param-key { font-size: 11px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--orange); min-width: 180px; }
+        .ed-param-val { font-size: 11.5px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+        .ed-down-arrow {
+            display: flex; flex-direction: column; align-items: center; padding: 4px 0;
+        }
+        .ed-down-line { width: 2px; height: 28px; background: rgba(240,165,0,0.4); }
+        .ed-down-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid rgba(240,165,0,0.4); }
+
+        .ed-db {
+            width: 100%;
+            background: rgba(240,165,0,0.08); border: 1.5px solid rgba(240,165,0,0.4);
+            border-radius: 12px; padding: 14px 20px;
+            text-align: center;
+        }
+        .ed-db-icon { font-size: 20px; margin-bottom: 4px; }
+        .ed-db-label { font-size: 13px; font-weight: 700; color: var(--orange); }
+        .ed-db-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+
+        /* ── POOL PARAMS VISUAL CARDS ───────────── */
+        .pool-params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+
+        .pool-param-card {
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+        }
+        .pool-param-card:hover { border-color: var(--orange); }
+
+        .pp-header {
+            background: var(--dark); padding: 14px 18px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .pp-key { font-size: 12px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--orange); }
+        .pp-val { font-size: 11px; color: rgba(255,255,255,0.4); margin-left: auto; }
+
+        .pp-visual {
+            padding: 18px; background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            min-height: 90px; display: flex; align-items: center; justify-content: center;
+        }
+        .pp-desc { padding: 14px 18px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+        .pp-desc strong { color: var(--dark); }
+
+        /* pool_size visual */
+        .vis-slots { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .vis-slot { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+        .vs-green { background: rgba(34,197,94,0.15); border: 2px solid #22c55e; color: #0f3d1f; }
+        .vs-orange { background: rgba(240,165,0,0.12); border: 2px dashed var(--orange); color: var(--orange-dark); }
+        .vs-grey { background: rgba(0,0,0,0.04); border: 2px dashed var(--border); color: var(--border); }
+        .vis-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-align: center; margin-top: 8px; }
+
+        /* pool_recycle visual: a timeline bar */
+        .recycle-bar { width: 100%; height: 10px; background: var(--border); border-radius: 10px; overflow: visible; position: relative; }
+        .recycle-fill { height: 100%; border-radius: 10px; background: linear-gradient(to right, #22c55e, var(--orange)); width: 100%; }
+        .recycle-mark { position: absolute; top: -14px; right: 0; font-size: 10px; font-weight: 700; color: #ef4444; white-space: nowrap; }
+        .recycle-mark::after { content: ''; display: block; width: 2px; height: 16px; background: #ef4444; margin: 0 auto; }
+        .recycle-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: var(--muted); font-weight: 600; }
+
+        /* pool_pre_ping visual */
+        .ping-flow { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+        .ping-box { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .ping-arrow { color: var(--muted); font-size: 14px; }
+        .ping-ok { background: rgba(34,197,94,0.15); color: #0f3d1f; border: 1.5px solid #22c55e; }
+        .ping-fail { background: rgba(239,68,68,0.12); color: #7f1d1d; border: 1.5px solid #ef4444; }
+
+        /* ── URL DIAGRAM ───────────────────────── */
+        .url-anatomy { background: var(--dark); border-radius: 14px; padding: 24px; }
+        .url-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; margin-bottom: 14px; }
+        .url-row { font-family: 'Courier New', monospace; font-size: 14px; color: #fff; line-height: 2.4; word-break: break-all; }
+        .up { border-radius: 4px; padding: 2px 6px; }
+        .up-s { background: rgba(207,117,0,0.3); color: #fbbf24; }
+        .up-u { background: rgba(34,197,94,0.2); color: #4ade80; }
+        .up-p { background: rgba(192,132,252,0.2); color: #c084fc; }
+        .up-h { background: rgba(56,189,248,0.2); color: #7dd3fc; }
+        .up-d { background: rgba(255,255,255,0.1); color: #ffffff; }
+        .url-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .ul-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); }
+        .ul-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+        /* ── LIFECYCLE FLOWCHART (always visible) ── */
+        .lifecycle-flowchart {
+            margin-top: 0;
+        }
+
+        .lfc-wrap {
+            display: flex; gap: 48px; align-items: flex-start;
+        }
+
+        /* The vertical timeline column */
+        .lfc-timeline {
+            flex: 0 0 320px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .lfc-step {
+            width: 100%;
+            border-radius: 12px;
+            padding: 14px 18px;
+            border: 2px solid var(--border);
+            background: #fff;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        .lfc-step.s-setup { border-color: var(--border); }
+        .lfc-step.s-yield {
+            border-color: var(--orange);
+            background: rgba(240,165,0,0.05);
+            box-shadow: 0 0 0 4px rgba(240,165,0,0.1);
+        }
+        .lfc-step.s-your-code {
+            background: var(--dark);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .lfc-step.s-resume {
+            border-color: #22c55e;
+            background: rgba(34,197,94,0.04);
+        }
+        .lfc-step.s-done { border-color: var(--border); }
+
+        .lfc-num {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--bg); border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 800; color: var(--muted);
+            flex-shrink: 0; margin-top: 1px;
+        }
+
+        .lfc-step.s-yield .lfc-num { background: var(--orange); border-color: var(--orange); color: var(--dark); }
+        .lfc-step.s-your-code .lfc-num { background: #3d4046; border-color: #555860; color: #fff; }
+        .lfc-step.s-resume .lfc-num { background: #22c55e; border-color: #22c55e; color: var(--dark); }
+
+        .lfc-stitle { font-size: 13px; font-weight: 700; color: var(--dark); line-height: 1.3; }
+        .lfc-step.s-yield .lfc-stitle { color: var(--orange-dark); }
+        .lfc-step.s-your-code .lfc-stitle { color: #fff; }
+        .lfc-step.s-resume .lfc-stitle { color: #166534; }
+
+        .lfc-sdesc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+        .lfc-step.s-your-code .lfc-sdesc { color: rgba(255,255,255,0.45); }
+
+        /* Arrow connectors between steps */
+        .lfc-arrow {
+            display: flex; flex-direction: column; align-items: center;
+            height: 28px; flex-shrink: 0;
+        }
+        .lfc-arrow-line { width: 2px; flex: 1; background: var(--border); }
+        .lfc-arrow-head { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid var(--border); }
+
+        .lfc-arrow.orange .lfc-arrow-line { background: var(--orange); }
+        .lfc-arrow.orange .lfc-arrow-head { border-top-color: var(--orange); }
+        .lfc-arrow.green .lfc-arrow-line { background: #22c55e; }
+        .lfc-arrow.green .lfc-arrow-head { border-top-color: #22c55e; }
+
+        /* Branch (commit / rollback) */
+        .lfc-branch-wrap {
+            width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .lfc-branch-line-in {
+            width: 2px; height: 20px;
+            background: linear-gradient(var(--border), var(--border));
+        }
+        .lfc-branch-fork {
+            width: 100%;
+            display: flex; gap: 10px;
+            position: relative;
+        }
+        .lfc-branch-fork::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            width: calc(50% - 5px);
+            height: 2px;
+            background: var(--border);
+            transform: translateX(-100%);
+        }
+        .lfc-branch-fork::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            width: calc(50% - 5px);
+            height: 2px;
+            background: var(--border);
+        }
+        .lfc-branch-box {
+            flex: 1; border-radius: 10px; padding: 12px 14px; text-align: center;
+            border: 1.5px solid; position: relative;
+        }
+        .lfc-branch-box::before {
+            content: '';
+            position: absolute;
+            top: -20px; left: 50%;
+            width: 2px; height: 20px;
+            background: var(--border);
+            transform: translateX(-50%);
+        }
+        .lfc-branch-box.commit { border-color: #22c55e; background: rgba(34,197,94,0.06); }
+        .lfc-branch-box.rollback { border-color: #ef4444; background: rgba(239,68,68,0.06); }
+        .lfc-branch-label { font-size: 12px; font-weight: 800; }
+        .lfc-branch-box.commit .lfc-branch-label { color: #166534; }
+        .lfc-branch-box.rollback .lfc-branch-label { color: #991b1b; }
+        .lfc-branch-sub { font-size: 11px; margin-top: 3px; }
+        .lfc-branch-box.commit .lfc-branch-sub { color: #4ade80; }
+        .lfc-branch-box.rollback .lfc-branch-sub { color: #f87171; }
+
+        .lfc-branch-merge {
+            width: 2px; height: 20px; background: var(--border); margin: 0 auto;
+        }
+
+        /* Right side explanations */
+        .lfc-explanations {
+            flex: 1;
+            display: flex; flex-direction: column; gap: 12px;
+            padding-top: 0;
+        }
+
+        .lfc-exp-card {
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: 10px; padding: 14px 16px;
+        }
+        .lfc-exp-card.exp-yield { border-color: rgba(240,165,0,0.5); background: rgba(240,165,0,0.04); }
+        .lfc-exp-card.exp-your-code { border-color: rgba(26,28,32,0.3); background: rgba(26,28,32,0.04); }
+        .lfc-exp-card.exp-resume { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.04); }
+
+        .lfc-exp-title { font-size: 12px; font-weight: 800; color: var(--dark); letter-spacing: 0.3px; margin-bottom: 5px; }
+        .lfc-exp-card.exp-yield .lfc-exp-title { color: var(--orange-dark); }
+        .lfc-exp-card.exp-resume .lfc-exp-title { color: #166534; }
+        .lfc-exp-text { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* ── YIELD CODE COMPARISON ─────────────── */
+        .yield-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0; }
+        .yc-box { border-radius: 12px; overflow: hidden; border: 2px solid; }
+        .yc-box.bad { border-color: #ef4444; }
+        .yc-box.good { border-color: var(--orange); }
+        .yc-head { padding: 12px 18px; display: flex; align-items: center; gap: 10px; }
+        .yc-box.bad .yc-head { background: rgba(239,68,68,0.08); }
+        .yc-box.good .yc-head { background: rgba(240,165,0,0.08); }
+        .yc-badge { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 100px; letter-spacing: 1px; }
+        .yc-box.bad .yc-badge { background: rgba(239,68,68,0.15); color: #7f1d1d; }
+        .yc-box.good .yc-badge { background: rgba(240,165,0,0.15); color: var(--orange-dark); }
+        .yc-title { font-size: 13px; font-weight: 700; }
+        .yc-box.bad .yc-title { color: #991b1b; }
+        .yc-box.good .yc-title { color: var(--orange-dark); }
+        .yc-box .cb { margin: 0; border-radius: 0; }
+
+        /* ── PROJECT STRUCTURE ──────────────────── */
+        .file-tree {
+            background: var(--dark); border-radius: 14px; padding: 24px;
+            font-family: 'Courier New', monospace;
+        }
+        .ft-root { font-size: 13px; font-weight: 700; color: var(--orange); margin-bottom: 10px; }
+        .ft-item { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .ft-item:last-child { border-bottom: none; }
+        .ft-tree { font-size: 12px; color: rgba(255,255,255,0.25); white-space: nowrap; }
+        .ft-name { font-size: 12.5px; font-weight: 600; color: #fff; }
+        .ft-comment { font-size: 11.5px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+
+        /* project steps */
+        .project-steps { display: flex; flex-direction: column; gap: 0; margin-top: 36px; }
+        .ps-step { display: flex; gap: 24px; padding-bottom: 0; }
+        .ps-left { display: flex; flex-direction: column; align-items: center; width: 44px; flex-shrink: 0; }
+        .ps-num {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--dark); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 800; flex-shrink: 0;
+        }
+        .ps-connector { width: 2px; flex: 1; min-height: 20px; background: var(--border); margin: 6px 0; }
+        .ps-step:last-child .ps-connector { display: none; }
+        .ps-right { flex: 1; padding-bottom: 32px; }
+        .ps-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .ps-title .ps-file { font-size: 11px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--orange-dark); background: rgba(207,117,0,0.1); padding: 3px 10px; border-radius: 4px; }
+
+        /* ── MODULE FOOTER ─────────────────────── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(240,165,0,0.12); } 50% { box-shadow: 0 0 0 10px rgba(240,165,0,0.04); } }
+
+        .s-yield { animation: pulse-glow 2s ease-in-out infinite; }
+
+        @media (max-width: 920px) {
+            nav { padding: 0 24px; }
+            .mod-hero { padding: 100px 24px 60px; }
+            .page { padding: 0 24px; }
+            .two-col { grid-template-columns: 1fr; gap: 40px; }
+            .two-col.flip { direction: ltr; }
+            .pool-params-grid { grid-template-columns: 1fr; }
+            .pkg-grid { grid-template-columns: 1fr; }
+            .yield-compare { grid-template-columns: 1fr; }
+            .lfc-wrap { flex-direction: column; }
+            .lfc-timeline { flex: none; width: 100%; }
+            .mod-foot { padding: 60px 24px; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 520px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="core-vs-orm.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Core vs ORM
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>03</strong></span></div>
+    <a href="sqlalchemy-core.html" class="nav-next">
+        SQLAlchemy Core
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">03</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow"><span class="mod-tag">MODULE 03</span></div>
+        <h1 class="mod-title">Setting Up<em>SQLAlchemy</em></h1>
+        <p class="mod-desc">Install it, connect it, understand the engine, master the connection pool, and learn why <code style="font-family:monospace;color:var(--orange)">yield session</code> is the right way to manage database sessions. Ends with a complete working project.</p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Installation</div>
+            <div class="chip"><div class="chip-dot"></div>create_async_engine</div>
+            <div class="chip"><div class="chip-dot"></div>Connection Pool</div>
+            <div class="chip"><div class="chip-dot"></div>yield Lifecycle</div>
+            <div class="chip"><div class="chip-dot"></div>Your First Project</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+    <!-- ══════════════════════════════════════════════
+         SECTION 1 — INSTALLATION
+    ══════════════════════════════════════════════ -->
+    <section class="section" id="s1">
+        <div class="two-col">
+            <div class="reveal">
+                <div class="sec-label"><span class="sec-n">01 / 05</span><div class="sec-rule"></div></div>
+                <h2 class="sec-title">Installation &amp; Basic Configuration</h2>
+                <div class="sec-copy">
+                    <p>You need two things: <strong>SQLAlchemy</strong> (the toolkit) and a <strong>database driver</strong> (the connector). The driver depends on which database you're using and whether your app is sync or async.</p>
+                    <p>For learning, start with <strong>SQLite</strong> — no installation, no server, just a file. Switch to PostgreSQL when you're ready for production.</p>
+                </div>
+                <div class="pkg-grid">
+                    <div class="pkg-card">
+                        <div class="pkg-name"><span>sqlalchemy</span></div>
+                        <div class="pkg-desc">The main toolkit — ORM, Core, engine, session. The only required package.</div>
+                    </div>
+                    <div class="pkg-card">
+                        <div class="pkg-name"><span>asyncpg</span></div>
+                        <div class="pkg-desc">Async PostgreSQL driver. Needed for async apps using FastAPI or asyncio.</div>
+                    </div>
+                    <div class="pkg-card">
+                        <div class="pkg-name"><span>psycopg2</span>-binary</div>
+                        <div class="pkg-desc">Sync PostgreSQL driver. Use for sync apps or Django-style projects.</div>
+                    </div>
+                    <div class="pkg-card">
+                        <div class="pkg-name"><span>alembic</span></div>
+                        <div class="pkg-desc">Database migration tool. Handles schema changes safely over time. (Module 15)</div>
+                    </div>
+                </div>
+                <div class="callout">
+                    <div class="callout-hl">SQLite needs no driver</div>
+                    <p>Python includes a SQLite driver built-in. <code style="font-family:monospace">create_engine("sqlite:///app.db")</code> works out of the box — great for learning and testing.</p>
+                </div>
+            </div>
+            <div class="reveal">
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">TERMINAL</span></div>
+                    <pre><code><span class="cc"># Async PostgreSQL (FastAPI, modern apps)</span>
+pip install sqlalchemy[asyncio] asyncpg
+
+<span class="cc"># Sync PostgreSQL</span>
+pip install sqlalchemy psycopg2-binary
+
+<span class="cc"># SQLite only (no extra driver)</span>
+pip install sqlalchemy
+
+<span class="cc"># Full production setup</span>
+pip install sqlalchemy[asyncio] asyncpg alembic</code></pre>
+                </div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">FIRST WORKING EXAMPLE — SQLITE</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> create_engine
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> DeclarativeBase, Session
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> Mapped, mapped_column
+
+engine = <span class="cm">create_engine</span>(<span class="cs">"sqlite:///myapp.db"</span>)
+
+<span class="ck">class</span> <span class="cf">Base</span>(DeclarativeBase): <span class="ck">pass</span>
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id:   <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name: <span class="cf">Mapped</span>[str]
+
+<span class="cf">Base</span>.metadata.<span class="cm">create_all</span>(engine)  <span class="cc"># create the table</span>
+
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    session.<span class="cm">add</span>(<span class="cf">User</span>(name=<span class="cs">"Alice"</span>))
+    session.<span class="cm">commit</span>()
+    print(<span class="cs">"User saved!"</span>)  <span class="cc"># ✓</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         SECTION 2 — create_async_engine
+    ══════════════════════════════════════════════ -->
+    <section class="section" id="s2">
+        <div class="two-col">
+            <div class="reveal">
+                <div class="sec-label"><span class="sec-n">02 / 05</span><div class="sec-rule"></div></div>
+                <h2 class="sec-title"><code style="font-family:monospace;font-size:0.85em">create_async_engine</code> — What It Does</h2>
+                <div class="sec-copy">
+                    <p><strong>The engine is the heart of SQLAlchemy.</strong> It manages how your app connects to the database. You create it once when your app starts, and use it for the entire lifetime of the application.</p>
+                    <p>You give it a <strong>database URL</strong> and some settings, and it builds a <strong>Connection Pool</strong> — a pre-warmed set of connections ready for immediate use. No new connection is opened for every request.</p>
+                    <p><code style="font-family:monospace;color:var(--orange)">create_async_engine</code> is the async version, needed for FastAPI and any app using <code style="font-family:monospace">asyncio</code>.</p>
+                </div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">database.py</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> (
+    create_async_engine,
+    async_sessionmaker
+)
+
+DATABASE_URL = (
+    <span class="cs">"postgresql+asyncpg://"</span>
+    <span class="cs">"user:password@localhost:5432/mydb"</span>
+)
+
+engine = <span class="cm">create_async_engine</span>(
+    DATABASE_URL,
+    pool_pre_ping=<span class="ck">True</span>,
+    pool_recycle=<span class="cn">3600</span>,
+    pool_size=<span class="cn">10</span>,
+    max_overflow=<span class="cn">20</span>,
+)
+
+<span class="cc"># session factory — use this to open sessions</span>
+async_session = <span class="cm">async_sessionmaker</span>(
+    engine, expire_on_commit=<span class="ck">False</span>
+)</code></pre>
+                </div>
+                <div class="callout">
+                    <div class="callout-hl">Create Once, Use Everywhere</div>
+                    <p>Create the engine <strong>once at startup</strong> — never inside a function that runs per request. Creating an engine is expensive; using it is fast.</p>
+                </div>
+            </div>
+
+            <!-- The engine diagram -->
+            <div class="reveal">
+                <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">How It All Connects</div>
+                <div class="engine-diagram">
+                    <!-- Your app -->
+                    <div class="ed-app">
+                        <div class="ed-app-icon">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="9" rx="2" stroke="#F0A500" stroke-width="1.5"/><path d="M5 14h6M8 12v2" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="ed-app-label">Your Python Application</div>
+                            <div class="ed-app-sub">FastAPI, Flask, scripts — anything</div>
+                        </div>
+                    </div>
+
+                    <!-- Function arrow -->
+                    <div class="ed-fn-arrow">
+                        <div class="ed-fn-line"></div>
+                        <div class="ed-fn-label">create_async_engine(url, **settings)</div>
+                        <div class="ed-fn-line2"></div>
+                        <div class="ed-fn-arrow-head"></div>
+                    </div>
+
+                    <!-- Engine box -->
+                    <div class="ed-engine">
+                        <div class="ed-engine-title">AsyncEngine</div>
+                        <div class="ed-pool">
+                            <div class="ed-pool-title">Connection Pool</div>
+
+                            <div class="ed-slots-row">
+                                <div class="ed-slot-label">pool_size=5</div>
+                                <div class="ed-slots">
+                                    <div class="ed-slot active">●</div>
+                                    <div class="ed-slot active">●</div>
+                                    <div class="ed-slot active">●</div>
+                                    <div class="ed-slot active">●</div>
+                                    <div class="ed-slot active">●</div>
+                                </div>
+                            </div>
+                            <div class="ed-slots-row">
+                                <div class="ed-slot-label">max_overflow=3</div>
+                                <div class="ed-slots">
+                                    <div class="ed-slot overflow">+</div>
+                                    <div class="ed-slot overflow">+</div>
+                                    <div class="ed-slot overflow">+</div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex;gap:6px;margin-top:12px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.4)">
+                                <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:3px;background:rgba(34,197,94,0.3);border:1px solid #22c55e"></div>Always ready</div>
+                                <div style="display:flex;align-items:center;gap:4px;margin-left:10px"><div style="width:10px;height:10px;border-radius:3px;background:rgba(240,165,0,0.15);border:1px dashed rgba(240,165,0,0.5)"></div>Created on demand</div>
+                            </div>
+
+                            <div class="ed-pool-params">
+                                <div class="ed-param">
+                                    <div class="ed-param-key">pool_pre_ping=True</div>
+                                    <div class="ed-param-val">Test each connection before handing it out</div>
+                                </div>
+                                <div class="ed-param">
+                                    <div class="ed-param-key">pool_recycle=3600</div>
+                                    <div class="ed-param-val">Refresh connections older than 1 hour</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Down arrow to DB -->
+                    <div class="ed-down-arrow">
+                        <div class="ed-down-line"></div>
+                        <div class="ed-down-head"></div>
+                    </div>
+
+                    <!-- Database -->
+                    <div class="ed-db">
+                        <div class="ed-db-label">PostgreSQL Database</div>
+                        <div class="ed-db-sub">host:5432 / database_name</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         SECTION 3 — CONNECTION POOL DEEP DIVE
+    ══════════════════════════════════════════════ -->
+    <section class="section" id="s3">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 05</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Connection Pool — The 4 Settings Explained</h2>
+            <div class="sec-copy" style="max-width:680px">
+                <p>The connection pool is like a waiting room of database connections — always ready to serve, so your app doesn't need to create a brand-new connection for every single request. These 4 settings control how that pool behaves.</p>
+            </div>
+        </div>
+
+        <div class="pool-params-grid reveal">
+            <!-- pool_size -->
+            <div class="pool-param-card">
+                <div class="pp-header">
+                    <div class="pp-key">pool_size</div>
+                    <div class="pp-val">= 5 (default)</div>
+                </div>
+                <div class="pp-visual">
+                    <div>
+                        <div class="vis-slots">
+                            <div class="vis-slot vs-green">C1</div>
+                            <div class="vis-slot vs-green">C2</div>
+                            <div class="vis-slot vs-green">C3</div>
+                            <div class="vis-slot vs-green">C4</div>
+                            <div class="vis-slot vs-green">C5</div>
+                        </div>
+                        <div class="vis-label" style="color:#166534">5 connections — always open, always ready</div>
+                    </div>
+                </div>
+                <div class="pp-desc">
+                    <strong>How many connections to keep permanently open.</strong> These are always connected to the database — no waiting, no handshake, just hand them out instantly when a request arrives. If all 5 are busy, the next request either gets an <em>overflow</em> connection or waits.
+                    <br><br>
+                    Set this to roughly your <strong>expected concurrent requests</strong>. A small API might need 5; a high-traffic service might need 20.
+                </div>
+            </div>
+
+            <!-- max_overflow -->
+            <div class="pool-param-card">
+                <div class="pp-header">
+                    <div class="pp-key">max_overflow</div>
+                    <div class="pp-val">= 10 (default)</div>
+                </div>
+                <div class="pp-visual">
+                    <div>
+                        <div class="vis-slots">
+                            <div class="vis-slot vs-green">C1</div>
+                            <div class="vis-slot vs-green">C2</div>
+                            <div class="vis-slot vs-green">C3</div>
+                            <div class="vis-slot vs-green">C4</div>
+                            <div class="vis-slot vs-green">C5</div>
+                            <div class="vis-slot vs-orange">+1</div>
+                            <div class="vis-slot vs-orange">+2</div>
+                            <div class="vis-slot vs-orange">+3</div>
+                        </div>
+                        <div class="vis-label" style="color:var(--orange-dark)">Overflow: created when pool is full, destroyed after use</div>
+                    </div>
+                </div>
+                <div class="pp-desc">
+                    <strong>Extra connections allowed during traffic spikes.</strong> When all <code style="font-family:monospace">pool_size</code> connections are busy, SQLAlchemy creates temporary extra connections — up to this number. Once the spike passes, overflow connections are <em>closed</em> (unlike pool connections which stay open).
+                    <br><br>
+                    Total max connections your app can hold = <code style="font-family:monospace">pool_size + max_overflow</code>.
+                </div>
+            </div>
+
+            <!-- pool_recycle -->
+            <div class="pool-param-card">
+                <div class="pp-header">
+                    <div class="pp-key">pool_recycle</div>
+                    <div class="pp-val">= 3600 (1 hour)</div>
+                </div>
+                <div class="pp-visual">
+                    <div style="width:100%;padding:0 8px">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">
+                            <span>Connection opened</span><span style="color:#ef4444">1 hour later →</span>
+                        </div>
+                        <div class="recycle-bar">
+                            <div class="recycle-fill"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-weight:600">
+                            <span style="color:#22c55e">🟢 Fresh &amp; active</span>
+                            <span style="color:#ef4444">♻️ Recycled (closed + replaced)</span>
+                        </div>
+                        <div style="margin-top:12px;padding:10px 12px;background:rgba(239,68,68,0.07);border-radius:8px;font-size:11.5px;color:#7f1d1d;font-weight:500;text-align:center">
+                            Prevents "connection dropped" or "SSL SYSCALL error" crashes
+                        </div>
+                    </div>
+                </div>
+                <div class="pp-desc">
+                    <strong>Automatically close and replace old connections.</strong> Database servers sometimes silently close idle connections after a while (e.g. AWS RDS closes connections after 30 minutes). Without <code style="font-family:monospace">pool_recycle</code>, your app would try to use a dead connection and crash.
+                    <br><br>
+                    Set this to <strong>less than your database's idle timeout</strong>. For AWS RDS, 1800 (30 min) or less is safe.
+                </div>
+            </div>
+
+            <!-- pool_pre_ping -->
+            <div class="pool-param-card">
+                <div class="pp-header">
+                    <div class="pp-key">pool_pre_ping</div>
+                    <div class="pp-val">= True</div>
+                </div>
+                <div class="pp-visual">
+                    <div style="width:100%">
+                        <div style="display:flex;flex-direction:column;gap:10px">
+                            <!-- Happy path -->
+                            <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 12px">
+                                <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:6px">✓ ALIVE</div>
+                                <div class="ping-flow">
+                                    <div class="ping-box" style="background:rgba(26,28,32,0.08);color:var(--dark);border:1.5px solid var(--border)">App</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div class="ping-box" style="background:rgba(240,165,0,0.1);color:var(--orange-dark);border:1.5px solid rgba(240,165,0,0.4)">ping?</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div class="ping-box ping-ok">pong! ✓</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div style="font-size:11px;font-weight:600;color:#166534">use it</div>
+                                </div>
+                            </div>
+                            <!-- Failed path -->
+                            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:10px 12px">
+                                <div style="font-size:10px;font-weight:700;color:#991b1b;margin-bottom:6px">✗ DEAD</div>
+                                <div class="ping-flow">
+                                    <div class="ping-box" style="background:rgba(26,28,32,0.08);color:var(--dark);border:1.5px solid var(--border)">App</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div class="ping-box" style="background:rgba(240,165,0,0.1);color:var(--orange-dark);border:1.5px solid rgba(240,165,0,0.4)">ping?</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div class="ping-box ping-fail">silence ✗</div>
+                                    <div class="ping-arrow">→</div>
+                                    <div style="font-size:11px;font-weight:600;color:#991b1b">replace</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pp-desc">
+                    <strong>Test every connection before using it.</strong> Before handing a connection to your code, SQLAlchemy sends a quick <code style="font-family:monospace">SELECT 1</code> to check it's still alive. If the database doesn't respond, the dead connection is discarded and a fresh one is created.
+                    <br><br>
+                    Always set this to <code style="font-family:monospace">True</code> in production. The overhead is tiny; the protection is essential.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         SECTION 4 — yield SESSION LIFECYCLE
+    ══════════════════════════════════════════════ -->
+    <section class="section" id="s4">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">04 / 05</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">The Session Lifecycle — <code style="font-family:monospace;font-size:0.82em;color:var(--orange)">yield</code> vs <code style="font-family:monospace;font-size:0.82em">return</code></h2>
+            <div class="sec-copy" style="max-width:680px">
+                <p>Every beginner asks this: <em>"Why does db_session use yield instead of return?"</em> The answer is simple — <code style="font-family:monospace;color:var(--orange)">yield</code> lets the function <strong>pause</strong>, give out the session, and then <strong>wake back up</strong> to do cleanup when your code is done. <code style="font-family:monospace">return</code> ends the function immediately — no cleanup ever happens.</p>
+            </div>
+        </div>
+
+        <!-- return vs yield comparison -->
+        <div class="yield-compare reveal">
+            <div class="yc-box bad">
+                <div class="yc-head">
+                    <div class="yc-badge">PROBLEM</div>
+                    <div class="yc-title">Using return — session leaks</div>
+                </div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">DON'T DO THIS</span></div>
+                    <pre><code><span class="ck">def</span> <span class="cf">get_session</span>():
+    session = <span class="cf">Session</span>(engine)
+    <span class="ck">return</span> session  <span class="cc"># function ENDS here</span>
+    <span class="cc"># cleanup code here? NEVER runs!</span>
+
+<span class="cc"># caller:</span>
+session = <span class="cm">get_session</span>()
+user = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">first</span>()
+<span class="cc"># ❌ nobody commits the transaction</span>
+<span class="cc"># ❌ nobody closes the session</span>
+<span class="cc"># ❌ connection stays open forever</span>
+<span class="cc"># ❌ pool runs out → app freezes</span></code></pre>
+                </div>
+            </div>
+            <div class="yc-box good">
+                <div class="yc-head">
+                    <div class="yc-badge">CORRECT</div>
+                    <div class="yc-title">Using yield — automatic cleanup</div>
+                </div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">DO THIS ✓</span></div>
+                    <pre><code><span class="ck">async def</span> <span class="cf">db_session</span>():
+    <span class="ck">async with</span> <span class="cm">async_session</span>() <span class="ck">as</span> session:
+        <span class="ck">async with</span> session.<span class="cm">begin</span>():
+            <span class="ck">yield</span> session  <span class="cc"># ⏸ PAUSE — caller runs</span>
+            <span class="cc"># ▶ RESUME — caller is done</span>
+        <span class="cc"># ✓ auto-commit OR auto-rollback</span>
+    <span class="cc"># ✓ session closed automatically</span>
+    <span class="cc"># ✓ connection returns to pool</span></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- The visual lifecycle flowchart -->
+        <div class="reveal" style="margin-top:48px">
+            <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px">Full Lifecycle — Step by Step</div>
+            <div style="font-size:16px;font-weight:700;color:var(--dark);letter-spacing:-0.4px;margin-bottom:32px">What happens from the moment a request arrives to when it's done</div>
+
+            <div class="lfc-wrap">
+                <!-- Left: Visual flowchart -->
+                <div class="lfc-timeline">
+
+                    <div class="lfc-step s-setup">
+                        <div class="lfc-num">1</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">Request Arrives</div>
+                            <div class="lfc-sdesc">FastAPI receives API call, sees <code class="ic">Depends(db_session)</code></div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <div class="lfc-step s-setup">
+                        <div class="lfc-num">2</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">Session Opened from Pool</div>
+                            <div class="lfc-sdesc"><code class="ic">async_session()</code> — grabs a ready connection</div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <div class="lfc-step s-setup">
+                        <div class="lfc-num">3</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">Transaction Begun</div>
+                            <div class="lfc-sdesc"><code class="ic">session.begin()</code> — opens a "draft" for your changes</div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow orange"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <!-- YIELD STEP — highlighted -->
+                    <div class="lfc-step s-yield">
+                        <div class="lfc-num">⏸</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">yield session — PAUSED</div>
+                            <div class="lfc-sdesc" style="color:var(--orange-dark)">Function freezes. Session handed to your route.</div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <!-- YOUR CODE -->
+                    <div class="lfc-step s-your-code">
+                        <div class="lfc-num" style="font-size:8px">YOU</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">Your Route Code Runs</div>
+                            <div class="lfc-sdesc">query, add, update, delete — all in the draft</div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow green"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <!-- RESUME -->
+                    <div class="lfc-step s-resume">
+                        <div class="lfc-num">▶</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">db_session() Resumes</div>
+                            <div class="lfc-sdesc" style="color:#166534">Your code is done. Cleanup begins.</div>
+                        </div>
+                    </div>
+                    <div class="lfc-arrow"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <!-- Branch -->
+                    <div class="lfc-branch-wrap">
+                        <div class="lfc-branch-fork">
+                            <div class="lfc-branch-box commit">
+                                <div class="lfc-branch-label">✓ COMMIT</div>
+                                <div class="lfc-branch-sub">no exception</div>
+                            </div>
+                            <div class="lfc-branch-box rollback">
+                                <div class="lfc-branch-label">✗ ROLLBACK</div>
+                                <div class="lfc-branch-sub">exception raised</div>
+                            </div>
+                        </div>
+                        <div class="lfc-branch-merge"></div>
+                    </div>
+
+                    <div class="lfc-arrow"><div class="lfc-arrow-line"></div><div class="lfc-arrow-head"></div></div>
+
+                    <div class="lfc-step s-done">
+                        <div class="lfc-num">✓</div>
+                        <div class="lfc-content">
+                            <div class="lfc-stitle">Session Closed → Pool</div>
+                            <div class="lfc-sdesc">Connection returns to pool. Ready for next request.</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right: Explanation cards -->
+                <div class="lfc-explanations">
+                    <div class="lfc-exp-card">
+                        <div class="lfc-exp-title">Steps 1–3: Setup</div>
+                        <div class="lfc-exp-text">Before your code touches the database, SQLAlchemy does the preparation — grabs a connection from the pool, wraps it in a session object, and starts a transaction. A <strong>transaction</strong> is like Google Docs "draft mode" — all changes are held temporarily, not written to the real database yet.</div>
+                    </div>
+
+                    <div class="lfc-exp-card exp-yield">
+                        <div class="lfc-exp-title">Step 4: The Pause (yield)</div>
+                        <div class="lfc-exp-text">This is the magic. <code class="ic">yield</code> freezes <code class="ic">db_session()</code> right at this line. Python hands the session to FastAPI's dependency injection, which passes it to your route as the <code class="ic">session</code> parameter. The function is still "alive" — it's just waiting.</div>
+                    </div>
+
+                    <div class="lfc-exp-card exp-your-code">
+                        <div class="lfc-exp-title">Step 5: Your Code Runs</div>
+                        <div class="lfc-exp-text">This is where your route function executes. Every <code class="ic">session.query()</code>, <code class="ic">session.add()</code>, or <code class="ic">session.execute()</code> call runs here. None of it hits the database permanently yet — it's all in the open transaction (the draft).</div>
+                    </div>
+
+                    <div class="lfc-exp-card exp-resume">
+                        <div class="lfc-exp-title">Step 6–7: Cleanup</div>
+                        <div class="lfc-exp-text">When your route returns a response, FastAPI signals that the dependency is done. <code class="ic">db_session()</code> wakes up.<br><br>
+                        <strong>If your route succeeded:</strong> the <code class="ic">async with session.begin()</code> block auto-commits — the draft becomes permanent.<br><br>
+                        <strong>If an exception was raised:</strong> it auto-rolls back — the draft is discarded, the database is unchanged. Then the session closes and the connection goes back to the pool.<br><br>
+                        You never write a single line of cleanup code.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FastAPI wiring -->
+        <div class="reveal" style="margin-top:48px">
+            <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">How to Wire It in FastAPI</div>
+            <div class="two-col" style="gap:24px;align-items:start">
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">YOUR ROUTE</span></div>
+                    <pre><code><span class="ck">from</span> fastapi <span class="ck">import</span> APIRouter, Depends
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> AsyncSession
+<span class="ck">from</span> database <span class="ck">import</span> db_session
+
+router = <span class="cf">APIRouter</span>()
+
+<span class="cm">@router.get</span>(<span class="cs">"/users/{user_id}"</span>)
+<span class="ck">async def</span> <span class="cf">get_user</span>(
+    user_id: int,
+    <span class="cc"># FastAPI calls db_session() for you</span>
+    session: <span class="cf">AsyncSession</span> = <span class="cm">Depends</span>(db_session)
+):
+    user = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)
+    <span class="ck">if not</span> user:
+        <span class="ck">raise</span> <span class="cf">HTTPException</span>(<span class="cn">404</span>)
+    <span class="ck">return</span> user  <span class="cc"># ← session auto-closes here</span></code></pre>
+                </div>
+                <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:24px">
+                    <div style="font-size:12px;font-weight:700;color:var(--dark);margin-bottom:16px">What <code style="font-family:monospace">Depends(db_session)</code> does automatically:</div>
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                        <div style="display:flex;gap:12px;align-items:flex-start">
+                            <div style="width:24px;height:24px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--dark);flex-shrink:0">1</div>
+                            <div style="font-size:13px;color:#454748;line-height:1.55">Calls <code class="ic">db_session()</code>, runs it up to the <code class="ic">yield</code></div>
+                        </div>
+                        <div style="display:flex;gap:12px;align-items:flex-start">
+                            <div style="width:24px;height:24px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--dark);flex-shrink:0">2</div>
+                            <div style="font-size:13px;color:#454748;line-height:1.55">Injects the yielded <code class="ic">session</code> as your route's parameter</div>
+                        </div>
+                        <div style="display:flex;gap:12px;align-items:flex-start">
+                            <div style="width:24px;height:24px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--dark);flex-shrink:0">3</div>
+                            <div style="font-size:13px;color:#454748;line-height:1.55">Your route runs — queries, inserts, whatever</div>
+                        </div>
+                        <div style="display:flex;gap:12px;align-items:flex-start">
+                            <div style="width:24px;height:24px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--dark);flex-shrink:0">4</div>
+                            <div style="font-size:13px;color:#454748;line-height:1.55">FastAPI resumes <code class="ic">db_session()</code> past the yield — commit, close, pool</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;padding:12px;background:rgba(240,165,0,0.07);border-radius:8px;font-size:12.5px;color:var(--dark)">
+                        <strong>You write zero cleanup code.</strong> The yield + async with pattern handles it all.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         SECTION 5 — FIRST PROJECT
+    ══════════════════════════════════════════════ -->
+    <section class="section" id="s5">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">05 / 05</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Creating Your First SQLAlchemy Project</h2>
+            <div class="sec-copy" style="max-width:640px">
+                <p>Let's build a small but complete project from scratch — a working async FastAPI app with SQLAlchemy that can create and read users. 4 files, 5 steps, fully working.</p>
+            </div>
+        </div>
+
+        <div class="two-col reveal" style="margin-top:36px;align-items:start">
+            <!-- File tree -->
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Project Structure</div>
+                <div class="file-tree">
+                    <div class="ft-root">my_project/</div>
+                    <div class="ft-item">
+                        <div class="ft-tree">├──</div>
+                        <div>
+                            <div class="ft-name">database.py</div>
+                            <div class="ft-comment"># engine, session factory, Base class</div>
+                        </div>
+                    </div>
+                    <div class="ft-item">
+                        <div class="ft-tree">├──</div>
+                        <div>
+                            <div class="ft-name">models.py</div>
+                            <div class="ft-comment"># SQLAlchemy table definitions</div>
+                        </div>
+                    </div>
+                    <div class="ft-item">
+                        <div class="ft-tree">├──</div>
+                        <div>
+                            <div class="ft-name">main.py</div>
+                            <div class="ft-comment"># FastAPI routes</div>
+                        </div>
+                    </div>
+                    <div class="ft-item">
+                        <div class="ft-tree">└──</div>
+                        <div>
+                            <div class="ft-name">requirements.txt</div>
+                            <div class="ft-comment"># dependencies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:20px">
+                    <div style="font-size:12px;font-weight:700;color:var(--dark);margin-bottom:14px">How the files connect:</div>
+                    <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--muted)">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <code style="font-family:monospace;color:var(--orange);background:rgba(240,165,0,0.1);padding:2px 7px;border-radius:4px">database.py</code>
+                            <span>creates the engine + Base</span>
+                        </div>
+                        <div style="padding-left:20px;color:var(--border)">↓ imported by</div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <code style="font-family:monospace;color:var(--orange);background:rgba(240,165,0,0.1);padding:2px 7px;border-radius:4px">models.py</code>
+                            <span>uses Base to define tables</span>
+                        </div>
+                        <div style="padding-left:20px;color:var(--border)">↓ imported by</div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <code style="font-family:monospace;color:var(--orange);background:rgba(240,165,0,0.1);padding:2px 7px;border-radius:4px">main.py</code>
+                            <span>uses models + db_session in routes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick start -->
+            <div>
+                <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Quick Install</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">requirements.txt + install</span></div>
+                    <pre><code>fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+
+<span class="cc"># then run:</span>
+pip install -r requirements.txt</code></pre>
+                </div>
+                <div class="callout">
+                    <div class="callout-hl">SQLite for simplicity</div>
+                    <p>The project below uses <strong>SQLite</strong> so you can run it without installing PostgreSQL. Just change the URL string to switch databases later.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step by step -->
+        <div class="project-steps reveal" style="margin-top:48px">
+
+            <!-- Step 1 -->
+            <div class="ps-step">
+                <div class="ps-left">
+                    <div class="ps-num">1</div>
+                    <div class="ps-connector"></div>
+                </div>
+                <div class="ps-right">
+                    <div class="ps-title">
+                        Create the engine and session
+                        <span class="ps-file">database.py</span>
+                    </div>
+                    <div class="cb">
+                        <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">database.py</span></div>
+                        <pre><code><span class="ck">from</span> typing <span class="ck">import</span> AsyncIterator
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> (
+    AsyncSession, async_sessionmaker, create_async_engine
+)
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> DeclarativeBase
+
+<span class="cc"># SQLite async — great for learning, no server needed</span>
+DATABASE_URL = <span class="cs">"sqlite+aiosqlite:///./myapp.db"</span>
+
+engine = <span class="cm">create_async_engine</span>(DATABASE_URL, echo=<span class="ck">True</span>)
+
+<span class="cc"># Session factory — use this everywhere</span>
+async_session = <span class="cm">async_sessionmaker</span>(engine, expire_on_commit=<span class="ck">False</span>)
+
+<span class="cc"># Base class — all models inherit from this</span>
+<span class="ck">class</span> <span class="cf">Base</span>(DeclarativeBase): <span class="ck">pass</span>
+
+<span class="cc"># The session dependency for FastAPI</span>
+<span class="ck">async def</span> <span class="cf">db_session</span>() -> <span class="cf">AsyncIterator</span>[<span class="cf">AsyncSession</span>]:
+    <span class="ck">async with</span> <span class="cm">async_session</span>() <span class="ck">as</span> session:
+        <span class="ck">async with</span> session.<span class="cm">begin</span>():
+            <span class="ck">yield</span> session</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="ps-step">
+                <div class="ps-left">
+                    <div class="ps-num">2</div>
+                    <div class="ps-connector"></div>
+                </div>
+                <div class="ps-right">
+                    <div class="ps-title">
+                        Define your models (tables)
+                        <span class="ps-file">models.py</span>
+                    </div>
+                    <div class="cb">
+                        <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">models.py</span></div>
+                        <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> Mapped, mapped_column
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> String
+<span class="ck">from</span> database <span class="ck">import</span> Base
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">100</span>))
+    email: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">200</span>), unique=<span class="ck">True</span>)
+
+    <span class="ck">def</span> <span class="cf">__repr__</span>(self):
+        <span class="ck">return</span> <span class="cs">f"User(id={</span>self.id<span class="cs">}, name={</span>self.name<span class="cs">!r})"</span></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="ps-step">
+                <div class="ps-left">
+                    <div class="ps-num">3</div>
+                    <div class="ps-connector"></div>
+                </div>
+                <div class="ps-right">
+                    <div class="ps-title">
+                        Build the FastAPI routes
+                        <span class="ps-file">main.py</span>
+                    </div>
+                    <div class="cb">
+                        <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">main.py</span></div>
+                        <pre><code><span class="ck">from</span> contextlib <span class="ck">import</span> asynccontextmanager
+<span class="ck">from</span> fastapi <span class="ck">import</span> FastAPI, Depends, HTTPException
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> AsyncSession
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> select
+<span class="ck">from</span> database <span class="ck">import</span> engine, Base, db_session
+<span class="ck">from</span> models <span class="ck">import</span> User
+
+<span class="cc"># Create tables when the app starts</span>
+<span class="cm">@asynccontextmanager</span>
+<span class="ck">async def</span> <span class="cf">lifespan</span>(app: <span class="cf">FastAPI</span>):
+    <span class="ck">async with</span> engine.<span class="cm">begin</span>() <span class="ck">as</span> conn:
+        <span class="ck">await</span> conn.<span class="cm">run_sync</span>(Base.metadata.create_all)
+    <span class="ck">yield</span>
+
+app = <span class="cf">FastAPI</span>(lifespan=lifespan)
+
+<span class="cc"># POST /users — create a user</span>
+<span class="cm">@app.post</span>(<span class="cs">"/users"</span>)
+<span class="ck">async def</span> <span class="cf">create_user</span>(
+    name: str, email: str,
+    session: <span class="cf">AsyncSession</span> = <span class="cm">Depends</span>(db_session)
+):
+    user = <span class="cf">User</span>(name=name, email=email)
+    session.<span class="cm">add</span>(user)
+    <span class="ck">await</span> session.<span class="cm">flush</span>()  <span class="cc"># gets the auto-generated id</span>
+    <span class="ck">return</span> {<span class="cs">"id"</span>: user.id, <span class="cs">"name"</span>: user.name}
+
+<span class="cc"># GET /users — list all users</span>
+<span class="cm">@app.get</span>(<span class="cs">"/users"</span>)
+<span class="ck">async def</span> <span class="cf">list_users</span>(
+    session: <span class="cf">AsyncSession</span> = <span class="cm">Depends</span>(db_session)
+):
+    result = <span class="ck">await</span> session.<span class="cm">execute</span>(<span class="cm">select</span>(<span class="cf">User</span>))
+    <span class="ck">return</span> result.<span class="cm">scalars</span>().<span class="cm">all</span>()</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="ps-step">
+                <div class="ps-left">
+                    <div class="ps-num">4</div>
+                    <div class="ps-connector"></div>
+                </div>
+                <div class="ps-right">
+                    <div class="ps-title">Install aiosqlite for async SQLite</div>
+                    <div class="cb">
+                        <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">TERMINAL</span></div>
+                        <pre><code><span class="cc"># SQLite needs an async driver too</span>
+pip install aiosqlite</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="ps-step">
+                <div class="ps-left">
+                    <div class="ps-num">5</div>
+                </div>
+                <div class="ps-right">
+                    <div class="ps-title">Run it!</div>
+                    <div class="cb">
+                        <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">TERMINAL</span></div>
+                        <pre><code>uvicorn main:app --reload
+
+<span class="cc"># Now visit:</span>
+<span class="cc"># http://localhost:8000/docs    ← Swagger UI</span>
+<span class="cc"># http://localhost:8000/users   ← list users</span>
+
+<span class="cc"># Create a user with curl:</span>
+curl -X POST "http://localhost:8000/users?name=Alice&email=alice@example.com"
+<span class="cc"># → {"id": 1, "name": "Alice"}</span></code></pre>
+                    </div>
+                    <div style="background:#fff;border:1.5px solid #22c55e;border-radius:12px;padding:18px;margin-top:16px">
+                        <div style="font-size:12px;font-weight:800;color:#166534;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🎉 Your app is running!</div>
+                        <div style="font-size:13.5px;color:#454748;line-height:1.65">You now have a working async FastAPI + SQLAlchemy project. The <code class="ic">myapp.db</code> file was created automatically. Every POST creates a real database row; every GET reads them back. From here, the rest of the modules build on this foundation.</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <p class="mf-label">Up Next — Module 04</p>
+            <p class="mf-title">SQLAlchemy <em>Core</em></p>
+        </div>
+        <a href="sqlalchemy-core.html" class="btn-next">
+            Continue Learning
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

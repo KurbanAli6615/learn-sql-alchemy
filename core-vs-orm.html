@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 02: Understanding SQLAlchemy — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ─────────────────────────────── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            height: 64px; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 48px;
+            background: rgba(26,28,32,0.97); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(240,165,0,0.12);
+        }
+        .nav-back {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; color: rgba(255,255,255,0.55);
+            font-size: 13px; font-weight: 500; transition: color 0.2s;
+        }
+        .nav-back:hover { color: #fff; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); letter-spacing: 0.5px; }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ───────────────────────────── */
+        .mod-hero {
+            min-height: 72vh; background: var(--dark);
+            display: flex; align-items: center;
+            padding: 120px 48px 80px; position: relative; overflow: hidden;
+        }
+        .mod-hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+        .hero-wm {
+            position: absolute; right: -50px; top: 50%; transform: translateY(-50%);
+            font-size: clamp(160px, 24vw, 300px); font-weight: 900;
+            color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -16px;
+            user-select: none; pointer-events: none;
+        }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; letter-spacing: 1px; }
+        .mod-title { font-size: clamp(40px, 6.5vw, 76px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3.5px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 560px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── CONTENT ────────────────────────── */
+        .page-content { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+
+        .lesson { padding: 96px 0; border-bottom: 1px solid var(--border); }
+        .lesson:last-child { border-bottom: none; }
+
+        .lesson-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+        .lesson-grid.rev { direction: rtl; }
+        .lesson-grid.rev > * { direction: ltr; }
+
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+
+        .lesson-title { font-size: clamp(24px, 3vw, 36px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .lesson-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .lesson-copy p + p { margin-top: 16px; }
+        .lesson-copy strong { color: var(--dark); font-weight: 600; }
+
+        .callout { margin-top: 24px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 15px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+
+        /* Code block */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 20px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.28); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.72; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; }
+        .cs { color: #87c264; }
+        .cc { color: #5a5c63; font-style: italic; }
+        .cf { color: #F0A500; }
+        .cn { color: #7ec8e3; }
+        .cm { color: #d4a0f0; }
+
+        /* ── SCROLL REVEAL ──────────────────── */
+        .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── SECTION 1 DIAGRAM: ROLE ─────────── */
+        .role-diagram {
+            position: relative;
+        }
+        .role-svg { width: 100%; }
+
+        .rbox { opacity: 0; transform: translateY(12px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .reveal.in .rbox { opacity: 1; transform: translateY(0); }
+
+        .rline {
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            transition: stroke-dashoffset 0.7s var(--ease);
+        }
+        .reveal.in .rline { stroke-dashoffset: 0; }
+
+        /* ── SECTION 2: CORE VS ORM FULL-WIDTH ── */
+        .lesson-wide { padding: 96px 0; border-bottom: 1px solid var(--border); }
+
+        .wide-header { max-width: 600px; margin-bottom: 56px; }
+
+        .compare-wrap {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .cmp-panel {
+            border-radius: 16px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+        }
+        .cmp-panel.p2 { transition-delay: 0.14s; }
+        .compare-wrap.in .cmp-panel { opacity: 1; transform: translateY(0); }
+
+        .cmp-head {
+            padding: 20px 24px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .cmp-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .cmp-label { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        .cmp-sublabel { font-size: 12px; font-weight: 400; margin-top: 2px; }
+
+        .cmp-rows { padding: 0 24px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+        .cmp-row {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 14px; border-radius: 8px;
+        }
+        .cmp-row-icon { flex-shrink: 0; margin-top: 1px; }
+        .cmp-row-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+        .cmp-row-desc { font-size: 12px; line-height: 1.5; }
+
+        /* Core panel */
+        .core-panel { background: var(--dark); border: 1.5px solid var(--orange); }
+        .core-panel .cmp-head { border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .core-panel .cmp-label { color: var(--orange); }
+        .core-panel .cmp-sublabel { color: rgba(255,255,255,0.4); }
+        .core-panel .cmp-row { background: rgba(255,255,255,0.04); }
+        .core-panel .cmp-row-title { color: #fff; }
+        .core-panel .cmp-row-desc { color: rgba(255,255,255,0.45); }
+
+        /* ORM panel */
+        .orm-panel { background: #fff; border: 1.5px solid var(--border); }
+        .orm-panel .cmp-head { border-bottom: 1px solid var(--border); background: rgba(26,28,32,0.03); }
+        .orm-panel .cmp-label { color: var(--dark); }
+        .orm-panel .cmp-sublabel { color: var(--muted); }
+        .orm-panel .cmp-row { background: var(--bg); }
+        .orm-panel .cmp-row-title { color: var(--dark); }
+        .orm-panel .cmp-row-desc { color: var(--muted); }
+
+        /* Code comparison side by side */
+        .code-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .vs-badge {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 800; color: var(--muted);
+            letter-spacing: 2px; padding: 10px 0;
+        }
+
+        /* ── SECTION 3: FEATURES GRID ──────────── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 48px;
+        }
+
+        .feat-card {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 24px 20px;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.45s var(--ease), transform 0.45s var(--ease), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .feat-card:hover {
+            border-color: var(--orange);
+            box-shadow: 0 8px 32px rgba(26,28,32,0.1);
+            transform: translateY(-3px);
+        }
+
+        .feat-card.in { opacity: 1; transform: translateY(0); }
+        .feat-card:hover { transform: translateY(-3px); }
+
+        .feat-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            background: rgba(240,165,0,0.1);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .feat-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 7px; letter-spacing: -0.2px; }
+        .feat-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+        /* ── MOD FOOTER ─────────────────────────── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s ease, transform 0.25s ease; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── RESPONSIVE ─────────────────────── */
+        @media (max-width: 940px) {
+            nav { padding: 0 24px; }
+            .mod-hero { padding: 100px 24px 60px; }
+            .page-content { padding: 0 24px; }
+            .lesson-grid { grid-template-columns: 1fr; gap: 48px; }
+            .lesson-grid.rev { direction: ltr; }
+            .compare-wrap { grid-template-columns: 1fr; }
+            .code-compare { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .mod-foot { padding: 60px 24px; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 520px) {
+            .features-grid { grid-template-columns: 1fr; }
+            .nav-next { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        All Modules
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>02</strong></span></div>
+    <a href="setup.html" class="nav-next">
+        Setup &amp; Config
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </a>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────── -->
+<header class="mod-hero">
+    <div class="hero-wm">02</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 02</span>
+        </div>
+        <h1 class="mod-title">
+            Understanding
+            <em>SQLAlchemy</em>
+        </h1>
+        <p class="mod-desc">
+            SQLAlchemy is not just an ORM — it's a complete database toolkit. This module breaks down what it actually is, the difference between its two layers, and why developers choose it over the alternatives.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>What is SQLAlchemy</div>
+            <div class="chip"><div class="chip-dot"></div>Core vs ORM</div>
+            <div class="chip"><div class="chip-dot"></div>Key Features</div>
+        </div>
+    </div>
+</header>
+
+<!-- ── CONTENT ────────────────────────────────── -->
+<main class="page-content">
+
+    <!-- ─── SECTION 1: WHAT IS SQLALCHEMY? ────── -->
+    <section class="lesson" id="s1">
+        <div class="lesson-grid">
+
+            <!-- Text -->
+            <div class="reveal">
+                <div class="sec-label"><span class="sec-n">01 / 03</span><div class="sec-rule"></div></div>
+                <h2 class="lesson-title">What is SQLAlchemy?</h2>
+                <div class="lesson-copy">
+                    <p>
+                        SQLAlchemy is a <strong>Python database toolkit</strong> created by Mike Bayer in 2005. It's the most widely used database library in the Python ecosystem — and it's much more than just an ORM.
+                    </p>
+                    <p>
+                        At its core, SQLAlchemy gives you two things: a powerful <strong>SQL Expression Language</strong> for writing SQL as Python, and a full <strong>Object Relational Mapper</strong> for working with databases through Python classes. You can use either layer — or both together.
+                    </p>
+                    <p>
+                        Unlike other ORMs that hide SQL from you, SQLAlchemy <strong>keeps you in control</strong>. It generates efficient SQL, but never stops you from going lower-level when you need to.
+                    </p>
+                </div>
+
+                <div class="callout">
+                    <div class="callout-hl">Not Just an ORM</div>
+                    <p>Django has a built-in ORM. Peewee is a simple ORM. SQLAlchemy is a <strong>complete database toolkit</strong> — the ORM is just one part of what it offers.</p>
+                </div>
+            </div>
+
+            <!-- Diagram: Role in the Stack -->
+            <div class="reveal role-diagram">
+                <svg class="role-svg" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                    <!-- Python App -->
+                    <g class="rbox" style="transition-delay:0s">
+                        <rect x="80" y="20" width="240" height="60" rx="12" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="200" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1C20" font-family="Poppins,sans-serif">Python Application</text>
+                        <text x="200" y="64" text-anchor="middle" font-size="10.5" fill="#6b6e75" font-family="Poppins,sans-serif">your code: models, queries, logic</text>
+                    </g>
+
+                    <!-- Arrow down -->
+                    <line x1="200" y1="80" x2="200" y2="108" stroke="#e2e2e2" stroke-width="1.5" class="rline" style="transition-delay:0.1s"/>
+
+                    <!-- SQLAlchemy box (the star) -->
+                    <g class="rbox" style="transition-delay:0.18s">
+                        <rect x="30" y="108" width="340" height="140" rx="14" fill="#1A1C20" stroke="#F0A500" stroke-width="2"/>
+                        <!-- Label -->
+                        <text x="200" y="136" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.35)" letter-spacing="3" font-family="Poppins,sans-serif">SQLALCHEMY</text>
+
+                        <!-- ORM sub-box -->
+                        <rect x="50" y="148" width="130" height="80" rx="9" fill="#2b2e36" stroke="rgba(240,165,0,0.4)" stroke-width="1.2"/>
+                        <text x="115" y="173" text-anchor="middle" font-size="11" font-weight="800" fill="#F0A500" font-family="Poppins,sans-serif">ORM Layer</text>
+                        <text x="115" y="190" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">Session, Models</text>
+                        <text x="115" y="205" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">Relationships</text>
+                        <text x="115" y="220" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">Queries</text>
+
+                        <!-- Core sub-box -->
+                        <rect x="220" y="148" width="130" height="80" rx="9" fill="#2b2e36" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+                        <text x="285" y="173" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="Poppins,sans-serif">Core Layer</text>
+                        <text x="285" y="190" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">Engine, Connection</text>
+                        <text x="285" y="205" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">SQL Expressions</text>
+                        <text x="285" y="220" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="Poppins,sans-serif">MetaData</text>
+                    </g>
+
+                    <!-- Arrow down -->
+                    <line x1="200" y1="248" x2="200" y2="276" stroke="rgba(240,165,0,0.4)" stroke-width="1.5" class="rline" style="transition-delay:0.35s"/>
+
+                    <!-- DBAPI box -->
+                    <g class="rbox" style="transition-delay:0.45s">
+                        <rect x="80" y="276" width="240" height="56" rx="12" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="200" y="300" text-anchor="middle" font-size="12" font-weight="700" fill="#1A1C20" font-family="Poppins,sans-serif">DBAPI Driver</text>
+                        <text x="200" y="318" text-anchor="middle" font-size="10.5" fill="#6b6e75" font-family="Poppins,sans-serif">psycopg2 · asyncpg · sqlite3</text>
+                    </g>
+
+                    <!-- Arrow down -->
+                    <line x1="200" y1="332" x2="200" y2="360" stroke="rgba(240,165,0,0.4)" stroke-width="1.5" class="rline" style="transition-delay:0.55s"/>
+
+                    <!-- Database -->
+                    <g class="rbox" style="transition-delay:0.65s">
+                        <rect x="60" y="360" width="280" height="60" rx="12" fill="var(--dark)" stroke="rgba(240,165,0,0.4)" stroke-width="1.5"/>
+                        <text x="200" y="385" text-anchor="middle" font-size="13" font-weight="800" fill="#F0A500" font-family="Poppins,sans-serif">Database</text>
+                        <text x="200" y="403" text-anchor="middle" font-size="10.5" fill="rgba(255,255,255,0.38)" font-family="Poppins,sans-serif">PostgreSQL · MySQL · SQLite · Oracle</text>
+                    </g>
+
+                    <!-- Bidirectional labels -->
+                    <text x="224" y="100" font-size="10" fill="rgba(240,165,0,0.5)" font-family="Poppins,sans-serif">translates</text>
+                    <text x="224" y="268" font-size="10" fill="rgba(240,165,0,0.5)" font-family="Poppins,sans-serif">generates SQL</text>
+                </svg>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ─── SECTION 2: CORE vs ORM ─────────────── -->
+    <section class="lesson-wide" id="s2">
+        <div class="reveal">
+            <div class="wide-header">
+                <div class="sec-label"><span class="sec-n">02 / 03</span><div class="sec-rule"></div></div>
+                <h2 class="lesson-title">Core vs ORM — Two Layers, One Library</h2>
+                <div class="lesson-copy">
+                    <p>
+                        SQLAlchemy has <strong>two distinct layers</strong> that work together. Understanding the difference helps you choose the right tool for each situation — and most production apps use both.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison panels -->
+        <div class="compare-wrap reveal" id="cmpWrap">
+            <!-- Core Panel -->
+            <div class="cmp-panel core-panel p1">
+                <div class="cmp-head">
+                    <div class="cmp-icon" style="background:rgba(240,165,0,0.15)">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                            <path d="M3 5h14M3 10h10M3 15h7" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="cmp-label">SQLAlchemy Core</div>
+                        <div class="cmp-sublabel">The SQL Expression Language layer</div>
+                    </div>
+                </div>
+                <div class="cmp-rows">
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" stroke="#F0A500" stroke-width="1.5"/><path d="M7 4v3l2 2" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">SQL Expression Language</div>
+                            <div class="cmp-row-desc">Build SQL as Python objects — <code style="font-family:monospace;color:#F0A500">select(users).where(...)</code></div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="2" stroke="#F0A500" stroke-width="1.5"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Table &amp; MetaData objects</div>
+                            <div class="cmp-row-desc">Define schema programmatically — no classes required</div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 7h10M7 2l5 5-5 5" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Connection-based execution</div>
+                            <div class="cmp-row-desc">Explicit <code style="font-family:monospace;color:#F0A500">conn.execute()</code> — you control every step</div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M7 2l1.5 3.5 3.5.5-2.5 2.5.5 3.5L7 10.5l-3 1.5.5-3.5-2.5-2.5 3.5-.5z" stroke="#F0A500" stroke-width="1.2"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Best for…</div>
+                            <div class="cmp-row-desc">Data pipelines, bulk operations, reporting, fine-grained SQL control</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORM Panel -->
+            <div class="cmp-panel orm-panel p2">
+                <div class="cmp-head">
+                    <div class="cmp-icon" style="background:rgba(26,28,32,0.07)">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                            <path d="M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" stroke="#1A1C20" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="cmp-label">SQLAlchemy ORM</div>
+                        <div class="cmp-sublabel">The Object-Relational Mapping layer</div>
+                    </div>
+                </div>
+                <div class="cmp-rows">
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" stroke="#1A1C20" stroke-width="1.5"/><path d="M5 7l1.5 1.5L9 5" stroke="#1A1C20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Python Class Models</div>
+                            <div class="cmp-row-desc">Define a class = define a table. Pure Python, no SQL strings</div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="2" stroke="#1A1C20" stroke-width="1.5"/><path d="M5 7h4M7 5v4" stroke="#1A1C20" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Session-based workflow</div>
+                            <div class="cmp-row-desc">Track changes to objects, commit once — SQLAlchemy handles the rest</div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 7h10M7 2l5 5-5 5" stroke="#1A1C20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Relationship mapping</div>
+                            <div class="cmp-row-desc">Navigate <code style="font-family:monospace">user.orders</code> like Python lists — JOINs handled automatically</div>
+                        </div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-row-icon">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M7 2l1.5 3.5 3.5.5-2.5 2.5.5 3.5L7 10.5l-3 1.5.5-3.5-2.5-2.5 3.5-.5z" stroke="#1A1C20" stroke-width="1.2"/></svg>
+                        </div>
+                        <div>
+                            <div class="cmp-row-title">Best for…</div>
+                            <div class="cmp-row-desc">Web apps, APIs, CRUD-heavy applications, rapid development</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Same task, both ways -->
+        <div class="reveal">
+            <p style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px">Same Task — Two Approaches</p>
+            <div class="code-compare">
+                <div>
+                    <div class="cb">
+                        <div class="cb-head">
+                            <div class="cb-dots"><span></span><span></span><span></span></div>
+                            <span class="cb-lang">USING CORE</span>
+                        </div>
+                        <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> (
+    create_engine, Table, Column,
+    Integer, String, MetaData, select
+)
+
+metadata = <span class="cf">MetaData</span>()
+users = <span class="cf">Table</span>(<span class="cs">'users'</span>, metadata,
+    <span class="cf">Column</span>(<span class="cs">'id'</span>, <span class="cf">Integer</span>, primary_key=<span class="ck">True</span>),
+    <span class="cf">Column</span>(<span class="cs">'name'</span>, <span class="cf">String</span>(<span class="cn">100</span>)),
+    <span class="cf">Column</span>(<span class="cs">'age'</span>, <span class="cf">Integer</span>),
+)
+
+<span class="ck">with</span> engine.<span class="cm">connect</span>() <span class="ck">as</span> conn:
+    stmt = <span class="cm">select</span>(users).<span class="cm">where</span>(
+        users.c.age > <span class="cn">18</span>
+    )
+    result = conn.<span class="cm">execute</span>(stmt)
+    <span class="ck">for</span> row <span class="ck">in</span> result:
+        print(row.name)</code></pre>
+                    </div>
+                </div>
+                <div>
+                    <div class="cb">
+                        <div class="cb-head">
+                            <div class="cb-dots"><span></span><span></span><span></span></div>
+                            <span class="cb-lang">USING ORM</span>
+                        </div>
+                        <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> (
+    DeclarativeBase, Session,
+    Mapped, mapped_column
+)
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> Integer, String
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">'users'</span>
+    id:   <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name: <span class="cf">Mapped</span>[str]
+    age:  <span class="cf">Mapped</span>[int]
+
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">filter</span>(
+        User.age > <span class="cn">18</span>
+    ).<span class="cm">all</span>()
+
+    <span class="ck">for</span> user <span class="ck">in</span> users:
+        print(user.name)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="callout reveal" style="margin-top:24px">
+            <div class="callout-hl">Which Should You Use?</div>
+            <p>For most web apps and APIs, <strong>start with the ORM</strong>. It's faster to write and easier to maintain. Drop down to <strong>Core</strong> when you need complex SQL, bulk inserts, or performance-critical queries where you want explicit control.</p>
+        </div>
+    </section>
+
+    <!-- ─── SECTION 3: KEY FEATURES ─────────────── -->
+    <section class="lesson" id="s3">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="lesson-title">Key Features &amp; Advantages</h2>
+            <div class="lesson-copy" style="max-width:640px">
+                <p>
+                    SQLAlchemy has been in production at scale since 2005. Here's what makes it the default choice for serious Python database work.
+                </p>
+            </div>
+        </div>
+
+        <div class="features-grid" id="featGrid">
+            <!-- Cards injected by JS -->
+        </div>
+    </section>
+
+</main>
+
+<!-- ── MODULE FOOTER ───────────────────────────── -->
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <p class="mf-label">Up Next — Module 03</p>
+            <p class="mf-title">Setup &amp; <em>Configuration</em></p>
+        </div>
+        <a href="setup.html" class="btn-next">
+            Continue Learning
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+/* ── Feature Cards ─────────────────────────────── */
+const features = [
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><ellipse cx="11" cy="6" rx="7" ry="3" stroke="#F0A500" stroke-width="1.5"/><path d="M4 6v10c0 1.66 3.13 3 7 3s7-1.34 7-3V6" stroke="#F0A500" stroke-width="1.5"/><path d="M4 11c0 1.66 3.13 3 7 3s7-1.34 7-3" stroke="#F0A500" stroke-width="1.5"/></svg>`,
+        title: 'Database Agnostic',
+        desc: 'The same Python code works with PostgreSQL, MySQL, SQLite, Oracle, and SQL Server. Switch databases by changing one string.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><rect x="3" y="3" width="7" height="7" rx="2" stroke="#F0A500" stroke-width="1.5"/><rect x="12" y="3" width="7" height="7" rx="2" stroke="#F0A500" stroke-width="1.5"/><rect x="3" y="12" width="7" height="7" rx="2" stroke="#F0A500" stroke-width="1.5"/><rect x="12" y="12" width="7" height="7" rx="2" stroke="#F0A500" stroke-width="1.5"/></svg>`,
+        title: 'Connection Pooling',
+        desc: 'Built-in connection pool reuses database connections efficiently, so your app handles thousands of requests without opening a new DB connection for each.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M3 6h16M3 11h12M3 16h8" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+        title: 'SQL Expression Language',
+        desc: 'Write complex SQL as composable Python objects. The Core layer lets you build, inspect, and modify queries programmatically before executing.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M4 11h14M4 11l4-4M4 11l4 4M18 11l-4-4M18 11l-4 4" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        title: 'Relationship Mapping',
+        desc: 'Define relationships between models once — SQLAlchemy handles JOINs, cascade deletes, and lazy/eager loading automatically.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M11 4v4M11 14v4M4 11h4M14 11h4" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/><circle cx="11" cy="11" r="3" stroke="#F0A500" stroke-width="1.5"/></svg>`,
+        title: 'Async Support',
+        desc: 'Native asyncio support with AsyncSession and AsyncEngine. Use asyncpg for high-performance non-blocking database operations in FastAPI and other async frameworks.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M5 11l4 4 8-8" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="8" stroke="#F0A500" stroke-width="1.5"/></svg>`,
+        title: 'Type Safety (2.0+)',
+        desc: 'SQLAlchemy 2.0 introduced full PEP 484 type annotations. Your IDE knows the exact type of every column — no more guessing or runtime surprises.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M4 4l2 14h12L20 4H4z" stroke="#F0A500" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#F0A500" stroke-width="1.5"/><line x1="9" y1="9" x2="9" y2="14" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/><line x1="13" y1="9" x2="13" y2="14" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+        title: 'Schema Migrations',
+        desc: 'Alembic (built by the same author) provides version-controlled database migrations that integrate directly with SQLAlchemy models.'
+    },
+    {
+        icon: `<svg width="22" height="22" fill="none" viewBox="0 0 22 22"><path d="M3 5h16v14H3z" rx="2" stroke="#F0A500" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 9h16M8 5V3M14 5V3" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+        title: '20 Years Battle-Tested',
+        desc: 'Released in 2006, SQLAlchemy powers apps at Reddit, Yelp, Dropbox, and Survey Monkey. It handles edge cases that simpler ORMs never considered.'
+    },
+];
+
+const grid = document.getElementById('featGrid');
+
+features.forEach((f, i) => {
+    const card = document.createElement('div');
+    card.className = 'feat-card';
+    card.style.transitionDelay = `${(i % 4) * 80}ms`;
+    card.innerHTML = `
+        <div class="feat-icon">${f.icon}</div>
+        <div class="feat-title">${f.title}</div>
+        <div class="feat-desc">${f.desc}</div>
+    `;
+    grid.appendChild(card);
+});
+
+/* ── Scroll Reveal ───────────────────────────────── */
+const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            if (e.target.classList.contains('compare-wrap')) {
+                e.target.classList.add('in');
+            } else {
+                e.target.classList.add('in');
+            }
+            io.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal, .compare-wrap').forEach(el => io.observe(el));
+
+// Feature cards - separate observer for stagger
+const fcIO = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            e.target.classList.add('in');
+            fcIO.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.feat-card').forEach(c => fcIO.observe(c));
+</script>
+</body>
+</html>

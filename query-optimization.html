@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Optimization &amp; Performance — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ── */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ── */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -60px; top: 50%; transform: translateY(-50%); font-size: clamp(120px, 20vw, 260px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -10px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .mod-title { font-size: clamp(36px, 5.5vw, 68px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── LAYOUT ── */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px, 3vw, 38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* ── CALLOUT ── */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #14532d; }
+        .callout-blue { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl { color: #1d4ed8; }
+        .callout-purple { background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl { color: #581c87; }
+        .callout-red { background: rgba(239,68,68,0.07); border-left-color: var(--red); }
+        .callout-red .callout-hl { color: #7f1d1d; }
+
+        /* ── CODE BLOCKS ── */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; } .cs { color: #87c264; } .cc { color: #6b7280; font-style: italic; }
+        .cf { color: #F0A500; } .cn { color: #7ec8e3; } .cm { color: #c084fc; } .csql { color: #38bdf8; }
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* ── REVEAL ── */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── PART DIVIDER ── */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* ── DIAGRAM LABEL ── */
+        .diag-label { font-size: 10px; font-weight: 800; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
+        .diag-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+        .diag-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+        /* ── TIMELINE DIAGRAM ── */
+        .timeline-wrap { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; overflow-x: auto; }
+        .tl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; min-width: 600px; }
+        .tl-side { display: flex; flex-direction: column; }
+        .tl-side-label { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .tl-bad-lbl { color: #ef4444; }
+        .tl-good-lbl { color: #22c55e; }
+        .tl-actors { display: flex; justify-content: space-between; margin-bottom: 10px; padding: 0 16px; }
+        .tl-actor { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 6px; }
+        .tl-actor-app { background: rgba(240,165,0,0.15); color: var(--orange); border: 1px solid rgba(240,165,0,0.3); }
+        .tl-actor-db  { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+        .tl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; position: relative; }
+        .tl-line-bad  { flex: 1; height: 2px; background: rgba(239,68,68,0.6); position: relative; }
+        .tl-line-good { flex: 1; height: 2px; background: rgba(34,197,94,0.6); position: relative; }
+        .tl-arrow-r::after { content:'▶'; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #ef4444; }
+        .tl-arrow-l::after { content:'◀'; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #ef4444; }
+        .tl-arrow-rg::after { content:'▶'; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #22c55e; }
+        .tl-arrow-lg::after { content:'◀'; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #22c55e; }
+        .tl-req-label { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+        .tl-req-bad  { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        .tl-req-good { background: rgba(34,197,94,0.15); color: #86efac; }
+        .tl-dots { text-align: center; color: rgba(239,68,68,0.5); letter-spacing: 2px; font-size: 14px; margin: 6px 0; }
+        .tl-summary { margin-top: 12px; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 8px; text-align: center; }
+        .tl-summary-bad  { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+        .tl-summary-good { background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+
+        /* ── QUERY SCALE CHART ── */
+        .scale-chart { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; }
+        .sc-chart-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .sc-chart-body { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; align-items: end; }
+        .sc-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .sc-bars { display: flex; gap: 6px; align-items: flex-end; height: 180px; }
+        .sc-bar { border-radius: 4px 4px 0 0; width: 38px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; transition: height 1s var(--ease); position: relative; }
+        .sc-bar-lazy { background: linear-gradient(to top, rgba(239,68,68,0.9), rgba(239,68,68,0.5)); }
+        .sc-bar-eager { background: linear-gradient(to top, rgba(34,197,94,0.9), rgba(34,197,94,0.5)); }
+        .sc-bar-val { font-size: 9px; font-weight: 800; color: #fff; writing-mode: vertical-lr; transform: rotate(180deg); }
+        .sc-x-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6); text-align: center; }
+        .sc-x-sub { font-size: 10px; color: rgba(255,255,255,0.3); text-align: center; }
+        .sc-legend { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+        .sc-legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); }
+        .sc-legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+        /* ── STRATEGY SQL DIAGRAM ── */
+        .strat-diagram { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 28px 0; }
+        .sd-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .sd-head { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .sd-head-joined  { background: rgba(34,197,94,0.08); }
+        .sd-head-subq    { background: rgba(168,85,247,0.08); }
+        .sd-head-selectin{ background: rgba(240,165,0,0.08); }
+        .sd-badge { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sdb-joined   { background: rgba(34,197,94,0.18); color: #14532d; border: 1px solid rgba(34,197,94,0.35); }
+        .sdb-subq     { background: rgba(168,85,247,0.18); color: #581c87; border: 1px solid rgba(168,85,247,0.35); }
+        .sdb-selectin { background: rgba(240,165,0,0.18); color: #78350f; border: 1px solid rgba(240,165,0,0.35); }
+        .sd-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-top: 6px; }
+        .sd-body { padding: 12px 16px; }
+        .sd-flow { display: flex; flex-direction: column; gap: 6px; }
+        .sd-step { border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: 'Courier New', monospace; line-height: 1.5; }
+        .sd-step-py  { background: rgba(192,132,252,0.08); color: #7c3aed; border: 1px solid rgba(192,132,252,0.2); }
+        .sd-step-sql { background: rgba(26,28,32,1); color: #d4d4d4; }
+        .sd-arrow { text-align: center; color: var(--muted); font-size: 14px; }
+        .sd-count { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 5px; margin-top: 8px; display: inline-block; }
+        .sdc-1 { background: rgba(34,197,94,0.15); color: #14532d; }
+        .sdc-2 { background: rgba(240,165,0,0.15); color: #78350f; }
+
+        /* ── JOIN ANATOMY DIAGRAM ── */
+        .join-anatomy { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; overflow-x: auto; }
+        .ja-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .ja-flow { display: flex; align-items: center; gap: 0; min-width: 700px; }
+        .ja-table { flex: 1; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+        .ja-th { background: rgba(255,255,255,0.06); padding: 8px 14px; font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 1.5px; text-transform: uppercase; font-family: 'Courier New', monospace; }
+        .ja-th.blue { color: #60a5fa; }
+        .ja-cols { display: flex; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .ja-col-h { flex: 1; padding: 6px 14px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 1px; text-transform: uppercase; font-family: 'Courier New', monospace; }
+        .ja-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .ja-row:last-child { border-bottom: none; }
+        .ja-row.hi { background: rgba(240,165,0,0.06); }
+        .ja-cell { flex: 1; padding: 7px 14px; font-family: 'Courier New', monospace; font-size: 12px; color: rgba(255,255,255,0.7); }
+        .ja-cell.pk { color: var(--orange); font-weight: 700; }
+        .ja-cell.fk { color: #c084fc; }
+        .ja-operator { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 20px; gap: 8px; flex-shrink: 0; }
+        .ja-op-icon { font-size: 28px; color: rgba(240,165,0,0.5); }
+        .ja-op-label { font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 2px; text-transform: uppercase; text-align: center; }
+        .ja-result { flex: 1.5; }
+
+        /* ── CACHE FLOWCHART ── */
+        .flowchart { background: var(--dark); border-radius: 16px; padding: 32px; margin: 28px 0; }
+        .fc-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+        .fc-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; }
+        .fc-node { padding: 10px 22px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center; min-width: 180px; }
+        .fc-start  { background: rgba(240,165,0,0.2); color: var(--orange); border: 2px solid rgba(240,165,0,0.5); border-radius: 100px; }
+        .fc-action { background: rgba(255,255,255,0.05); color: #fff; border: 1.5px solid rgba(255,255,255,0.15); }
+        .fc-decision { background: rgba(59,130,246,0.15); color: #93c5fd; border: 2px solid rgba(59,130,246,0.4); transform: rotate(0deg); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); padding: 22px 40px; min-width: 200px; }
+        .fc-yes   { background: rgba(34,197,94,0.15); color: #86efac; border: 1.5px solid rgba(34,197,94,0.35); }
+        .fc-no    { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1.5px solid rgba(239,68,68,0.3); }
+        .fc-end   { background: rgba(240,165,0,0.2); color: var(--orange); border: 2px solid rgba(240,165,0,0.5); border-radius: 100px; }
+        .fc-arrow { color: rgba(255,255,255,0.3); font-size: 20px; line-height: 1; margin: 2px 0; }
+        .fc-split { display: flex; gap: 40px; align-items: flex-start; position: relative; }
+        .fc-split-branch { display: flex; flex-direction: column; align-items: center; gap: 0; }
+        .fc-branch-label { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 4px; margin-bottom: 6px; }
+        .fc-hit-label  { background: rgba(34,197,94,0.15); color: #86efac; }
+        .fc-miss-label { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        .fc-join-line { width: 100%; height: 2px; background: rgba(255,255,255,0.1); margin: 0; }
+
+        /* ── PERF COMPARISON BAR ── */
+        .perf-bars { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .pb-row { display: flex; align-items: center; gap: 12px; }
+        .pb-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); width: 80px; flex-shrink: 0; text-align: right; }
+        .pb-track { flex: 1; background: rgba(255,255,255,0.06); border-radius: 4px; height: 22px; overflow: hidden; position: relative; }
+        .pb-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 10px; }
+        .pb-fill-bad  { background: linear-gradient(90deg, rgba(239,68,68,0.8), rgba(239,68,68,0.5)); }
+        .pb-fill-good { background: linear-gradient(90deg, rgba(34,197,94,0.8), rgba(34,197,94,0.5)); }
+        .pb-fill-val { font-size: 10px; font-weight: 800; color: #fff; white-space: nowrap; }
+        .pb-unit { font-size: 11px; color: rgba(255,255,255,0.3); width: 60px; flex-shrink: 0; }
+
+        /* ── STRATEGY CARDS ── */
+        .strategy-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 28px; }
+        .strategy-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .sc-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .sc-badge { font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .sb-lazy   { background: rgba(239,68,68,0.18);   color: #7f1d1d; border: 1px solid rgba(239,68,68,0.35); }
+        .sb-joined { background: rgba(34,197,94,0.18);   color: #14532d; border: 1px solid rgba(34,197,94,0.35); }
+        .sb-subq   { background: rgba(168,85,247,0.18);  color: #581c87; border: 1px solid rgba(168,85,247,0.35); }
+        .sb-select { background: rgba(240,165,0,0.18);   color: #78350f; border: 1px solid rgba(240,165,0,0.35); }
+        .sc-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+        .sc-body { padding: 12px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+        .sc-query-count { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 5px; margin-top: 8px; display: inline-block; }
+        .sqc-bad  { background: rgba(239,68,68,0.18);  color: #7f1d1d; }
+        .sqc-ok   { background: rgba(240,165,0,0.18);  color: #78350f; }
+        .sqc-good { background: rgba(34,197,94,0.18);  color: #14532d; }
+        .sc-ex { font-family: 'Courier New', monospace; font-size: 11px; color: #0369a1; margin-top: 8px; line-height: 1.5; }
+
+        /* ── JOIN COMPARE ── */
+        .join-compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); margin: 28px 0; }
+        .jc-side { overflow: hidden; }
+        .jc-label { padding: 9px 16px; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        .jc-bad  .jc-label { background: rgba(239,68,68,0.15);  color: #7f1d1d;  border-bottom: 1px solid rgba(239,68,68,0.25); }
+        .jc-good .jc-label { background: rgba(34,197,94,0.15);  color: #14532d;  border-bottom: 1px solid rgba(34,197,94,0.25); }
+        .jc-bad  .cb, .jc-good .cb { margin: 0; border-radius: 0; border: none; }
+        .jc-sep { display: flex; align-items: center; justify-content: center; padding: 0 16px; background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); font-size: 22px; color: var(--orange); }
+
+        /* ── PERF CARDS ── */
+        .perf-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-top: 28px; }
+        .perf-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .pc-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .pc-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .pc-icon-blue   { background: rgba(59,130,246,0.1); }
+        .pc-icon-green  { background: rgba(34,197,94,0.1); }
+        .pc-icon-purple { background: rgba(168,85,247,0.1); }
+        .pc-icon-orange { background: rgba(240,165,0,0.1); }
+        .pc-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .pc-body { padding: 14px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+        /* ── MODULE FOOTER ── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes growBar { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
+        .bar-anim { animation: growBar 1s var(--ease) both; }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col { grid-template-columns: 1fr; gap: 40px; }
+            .strategy-grid, .strat-diagram, .sc-chart-body { grid-template-columns: 1fr; }
+            .perf-grid { grid-template-columns: 1fr; }
+            .join-compare { grid-template-columns: 1fr; }
+            .jc-sep { display: none; }
+            .fc-split { flex-direction: column; align-items: center; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 580px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="advanced-orm.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Advanced ORM
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>07</strong></span></div>
+    <a href="session-management.html" class="nav-next">
+        Session Management
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">PERF</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 07</span>
+        </div>
+        <h1 class="mod-title">Query Optimization<em>&amp; Performance</em></h1>
+        <p class="mod-desc">
+            Slow queries are the most common SQLAlchemy problem in production. This module covers
+            the three techniques that fix the vast majority of them — choosing the right loading
+            strategy, writing joins that scale, and caching so the database never answers
+            the same question twice.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Eager vs Lazy Loading</div>
+            <div class="chip"><div class="chip-dot"></div>N+1 Problem</div>
+            <div class="chip"><div class="chip-dot"></div>joinedload / selectinload</div>
+            <div class="chip"><div class="chip-dot"></div>Efficient Joins</div>
+            <div class="chip"><div class="chip-dot"></div>dogpile.cache</div>
+            <div class="chip"><div class="chip-dot"></div>lru_cache</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">Eager Loading vs. Lazy Loading</div>
+        <div class="part-desc">Why the default behaviour causes the N+1 problem, visualised as a timeline, and how the three eager strategies each solve it.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 1 ══ -->
+<section class="section" id="s1">
+
+    <!-- Concept + code -->
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Lazy Loading — The Default That Hides a Problem</h2>
+            <div class="sec-copy">
+                <p>By default, SQLAlchemy uses <strong>lazy loading</strong> — related objects are not fetched until you access them in Python. The moment you write <code class="ic">user.addresses</code> inside a loop, SQLAlchemy fires a brand-new SELECT for each iteration.</p>
+                <p>This creates the <strong>N+1 problem</strong>: one query to load N users, then one more query per user when you touch their addresses = N+1 total queries. The solution is <strong>eager loading</strong> — you tell SQLAlchemy to fetch the related data alongside the main query so no extra queries fire in the loop.</p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">The N+1 problem in one sentence</div>
+                <p>1 query to load N records + N queries to load their relationships = N+1 database calls. With 1,000 users this becomes 1,001 calls where 2 would suffice.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">LAZY vs EAGER — THE DIFFERENCE</span></div>
+                <pre><code><span class="cc"># ❌ LAZY — N+1 queries</span>
+users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">all</span>()
+<span class="ck">for</span> user <span class="ck">in</span> users:
+    <span class="cm">print</span>(user.addresses)   <span class="cc"># fires a SELECT each time</span>
+
+
+<span class="cc"># ✅ EAGER — 1 query with a JOIN</span>
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> joinedload
+
+users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">options</span>(
+    <span class="cm">joinedload</span>(<span class="cf">User</span>.addresses)
+).<span class="cm">all</span>()
+<span class="ck">for</span> user <span class="ck">in</span> users:
+    <span class="cm">print</span>(user.addresses)   <span class="cc"># already loaded, no query</span>
+
+
+<span class="cc"># ✅ EAGER — 2 queries with selectinload (recommended)</span>
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> selectinload
+
+users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">options</span>(
+    <span class="cm">selectinload</span>(<span class="cf">User</span>.addresses)
+).<span class="cm">all</span>()
+<span class="ck">for</span> user <span class="ck">in</span> users:
+    <span class="cm">print</span>(user.addresses)   <span class="cc"># already loaded, no query</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 1: Round-Trip Timeline ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Round-Trip Timeline Diagram</div>
+        <div class="diag-sub">Every arrow is a network call between your app and the database. Lazy loading multiplies them; eager loading collapses them into one.</div>
+        <div class="timeline-wrap">
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">App ↔ Database round trips — fetching 4 users and their addresses</div>
+            <div class="tl-grid">
+                <!-- BAD side -->
+                <div class="tl-side">
+                    <div class="tl-side-label tl-bad-lbl">❌ Lazy Loading — N+1 calls</div>
+                    <div class="tl-actors">
+                        <span class="tl-actor tl-actor-app">App</span>
+                        <span class="tl-actor tl-actor-db">Database</span>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">SELECT users</span>
+                        <div class="tl-line-bad tl-arrow-r" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">← [4 rows]</span>
+                        <div class="tl-line-bad tl-arrow-l" style="flex:1"></div>
+                    </div>
+                    <div style="height:8px"></div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">SELECT addr(1)</span>
+                        <div class="tl-line-bad tl-arrow-r" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">← [result]</span>
+                        <div class="tl-line-bad tl-arrow-l" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">SELECT addr(2)</span>
+                        <div class="tl-line-bad tl-arrow-r" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">← [result]</span>
+                        <div class="tl-line-bad tl-arrow-l" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">SELECT addr(3)</span>
+                        <div class="tl-line-bad tl-arrow-r" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">← [result]</span>
+                        <div class="tl-line-bad tl-arrow-l" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">SELECT addr(4)</span>
+                        <div class="tl-line-bad tl-arrow-r" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-bad">← [result]</span>
+                        <div class="tl-line-bad tl-arrow-l" style="flex:1"></div>
+                    </div>
+                    <div class="tl-summary tl-summary-bad">5 round-trips &nbsp;|&nbsp; 1,000 users = 1,001 calls</div>
+                </div>
+                <!-- GOOD side -->
+                <div class="tl-side">
+                    <div class="tl-side-label tl-good-lbl">✅ Eager Loading — selectinload</div>
+                    <div class="tl-actors">
+                        <span class="tl-actor tl-actor-app">App</span>
+                        <span class="tl-actor tl-actor-db">Database</span>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-good">SELECT users</span>
+                        <div class="tl-line-good tl-arrow-rg" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-good">← [4 rows]</span>
+                        <div class="tl-line-good tl-arrow-lg" style="flex:1"></div>
+                    </div>
+                    <div style="height:8px"></div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-good">SELECT WHERE IN(1,2,3,4)</span>
+                        <div class="tl-line-good tl-arrow-rg" style="flex:1"></div>
+                    </div>
+                    <div class="tl-row">
+                        <span class="tl-req-label tl-req-good">← [ALL addresses]</span>
+                        <div class="tl-line-good tl-arrow-lg" style="flex:1"></div>
+                    </div>
+                    <div style="height:8px"></div>
+                    <div style="background:rgba(34,197,94,0.06);border:1px dashed rgba(34,197,94,0.2);border-radius:8px;padding:12px 14px">
+                        <div style="font-size:10px;font-weight:700;color:#4ade80;margin-bottom:6px">PYTHON MEMORY — no more DB calls</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.4);line-height:1.6">SQLAlchemy maps each address to its user in memory. Accessing <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.6)">user.addresses</code> in the loop returns the cached result.</div>
+                    </div>
+                    <div class="tl-summary tl-summary-good">2 round-trips &nbsp;|&nbsp; 1,000 users = still 2 calls</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 2: Query Count Scale Chart ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Query Count Growth Chart</div>
+        <div class="diag-sub">Lazy loading query count grows linearly with row count. Eager loading stays flat at 2 queries — forever.</div>
+        <div class="scale-chart">
+            <div class="sc-chart-title">Total database queries — lazy vs eager, by record count</div>
+            <div class="sc-chart-body">
+                <!-- 10 records -->
+                <div class="sc-group">
+                    <div class="sc-bars">
+                        <div class="sc-bar sc-bar-lazy bar-anim" style="height:22px">
+                            <span class="sc-bar-val">11</span>
+                        </div>
+                        <div class="sc-bar sc-bar-eager bar-anim" style="height:4px;justify-content:flex-start;padding-top:4px">
+                            <span style="font-size:9px;font-weight:800;color:#fff;position:absolute;top:-16px;left:0;right:0;text-align:center">2</span>
+                        </div>
+                    </div>
+                    <div class="sc-x-label">10 records</div>
+                    <div class="sc-x-sub">Lazy: 11 queries</div>
+                </div>
+                <!-- 100 records -->
+                <div class="sc-group">
+                    <div class="sc-bars">
+                        <div class="sc-bar sc-bar-lazy bar-anim" style="height:101px;animation-delay:0.2s">
+                            <span class="sc-bar-val">101</span>
+                        </div>
+                        <div class="sc-bar sc-bar-eager bar-anim" style="height:4px;animation-delay:0.2s;justify-content:flex-start;padding-top:4px">
+                            <span style="font-size:9px;font-weight:800;color:#fff;position:absolute;top:-16px;left:0;right:0;text-align:center">2</span>
+                        </div>
+                    </div>
+                    <div class="sc-x-label">100 records</div>
+                    <div class="sc-x-sub">Lazy: 101 queries</div>
+                </div>
+                <!-- 1000 records -->
+                <div class="sc-group">
+                    <div class="sc-bars">
+                        <div class="sc-bar sc-bar-lazy bar-anim" style="height:180px;animation-delay:0.4s">
+                            <span class="sc-bar-val">1,001</span>
+                        </div>
+                        <div class="sc-bar sc-bar-eager bar-anim" style="height:4px;animation-delay:0.4s;justify-content:flex-start;padding-top:4px">
+                            <span style="font-size:9px;font-weight:800;color:#fff;position:absolute;top:-16px;left:0;right:0;text-align:center">2</span>
+                        </div>
+                    </div>
+                    <div class="sc-x-label">1,000 records</div>
+                    <div class="sc-x-sub">Lazy: 1,001 queries</div>
+                </div>
+            </div>
+            <div class="sc-legend">
+                <div class="sc-legend-item"><div class="sc-legend-dot" style="background:#ef4444"></div>Lazy Loading (N+1)</div>
+                <div class="sc-legend-item"><div class="sc-legend-dot" style="background:#22c55e"></div>Eager Loading (always 2)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Three strategy cards ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Three Eager Strategies — Choose by Use Case</div>
+        <div class="diag-sub">Each solves N+1 differently. Your choice depends on collection size and whether you need to filter by the related table.</div>
+        <div class="strategy-grid">
+            <div class="strategy-card">
+                <div class="sc-head">
+                    <span class="sc-badge sb-joined">Joined</span>
+                    <span class="sc-name">joinedload()</span>
+                </div>
+                <div class="sc-body">
+                    Performs a <code class="ic">LEFT OUTER JOIN</code> — loads parents and children in a single query. Best when you need to <strong>filter by the child's columns</strong>.
+                    <div class="sc-ex">session.query(User).options(<br>&nbsp;&nbsp;joinedload(User.addresses)<br>).all()</div>
+                    <div class="sc-query-count sqc-good">1 query total ✓</div>
+                </div>
+            </div>
+            <div class="strategy-card">
+                <div class="sc-head">
+                    <span class="sc-badge sb-subq">Subquery</span>
+                    <span class="sc-name">subqueryload()</span>
+                </div>
+                <div class="sc-body">
+                    Second query using <code class="ic">WHERE id IN (subquery)</code>. <strong>Better for large collections</strong> — avoids the row duplication that joinedload causes.
+                    <div class="sc-ex">session.query(User).options(<br>&nbsp;&nbsp;subqueryload(User.addresses)<br>).all()</div>
+                    <div class="sc-query-count sqc-ok">2 queries total ✓</div>
+                </div>
+            </div>
+            <div class="strategy-card">
+                <div class="sc-head">
+                    <span class="sc-badge sb-select">Selectin</span>
+                    <span class="sc-name">selectinload()</span>
+                </div>
+                <div class="sc-body">
+                    <code class="ic">SELECT WHERE id IN (…)</code> — the <strong>recommended default for SQLAlchemy 2.0</strong>. Simpler SQL than subqueryload, no duplication.
+                    <div class="sc-ex">session.query(User).options(<br>&nbsp;&nbsp;selectinload(User.addresses)<br>).all()</div>
+                    <div class="sc-query-count sqc-good">2 queries total ✓</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 3: SQL Pattern per strategy ── -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">What SQL Each Strategy Generates</div>
+        <div class="diag-sub">The same Python call — three different SQL patterns sent to the database.</div>
+        <div class="strat-diagram">
+            <!-- joinedload -->
+            <div class="sd-card">
+                <div class="sd-head sd-head-joined">
+                    <span class="sd-badge sdb-joined">joinedload</span>
+                    <div class="sd-name">Single JOIN query</div>
+                </div>
+                <div class="sd-body">
+                    <div class="sd-flow">
+                        <div class="sd-step sd-step-py">joinedload(User.addresses)</div>
+                        <div class="sd-arrow">↓ generates</div>
+                        <div class="sd-step sd-step-sql"><span style="color:#38bdf8">SELECT</span> users.*, addresses.*<br><span style="color:#38bdf8">FROM</span> users<br><span style="color:#38bdf8">LEFT OUTER JOIN</span> addresses<br>&nbsp;&nbsp;<span style="color:#38bdf8">ON</span> addresses.user_id = users.id</div>
+                        <div class="sd-count sdc-1">1 SQL query</div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6">⚠️ If a user has 3 addresses, their row appears <strong>3 times</strong> in the result. Call <code class="ic">.unique()</code> to deduplicate.</div>
+                </div>
+            </div>
+            <!-- selectinload -->
+            <div class="sd-card">
+                <div class="sd-head sd-head-selectin">
+                    <span class="sd-badge sdb-selectin">selectinload</span>
+                    <div class="sd-name">WHERE IN query</div>
+                </div>
+                <div class="sd-body">
+                    <div class="sd-flow">
+                        <div class="sd-step sd-step-py">selectinload(User.addresses)</div>
+                        <div class="sd-arrow">↓ generates</div>
+                        <div class="sd-step sd-step-sql"><span style="color:#38bdf8">SELECT</span> * <span style="color:#38bdf8">FROM</span> users<br><br><span style="color:#38bdf8">SELECT</span> * <span style="color:#38bdf8">FROM</span> addresses<br><span style="color:#38bdf8">WHERE</span> user_id <span style="color:#38bdf8">IN</span> (1, 2, 3, 4)</div>
+                        <div class="sd-count sdc-2">2 SQL queries</div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6">✅ No row duplication. SQLAlchemy maps addresses to users in Python memory after query 2.</div>
+                </div>
+            </div>
+            <!-- subqueryload -->
+            <div class="sd-card">
+                <div class="sd-head sd-head-subq">
+                    <span class="sd-badge sdb-subq">subqueryload</span>
+                    <div class="sd-name">Subquery pattern</div>
+                </div>
+                <div class="sd-body">
+                    <div class="sd-flow">
+                        <div class="sd-step sd-step-py">subqueryload(User.addresses)</div>
+                        <div class="sd-arrow">↓ generates</div>
+                        <div class="sd-step sd-step-sql"><span style="color:#38bdf8">SELECT</span> * <span style="color:#38bdf8">FROM</span> users<br><br><span style="color:#38bdf8">SELECT</span> * <span style="color:#38bdf8">FROM</span> addresses<br><span style="color:#38bdf8">WHERE</span> user_id <span style="color:#38bdf8">IN</span> (<br>&nbsp;&nbsp;<span style="color:#38bdf8">SELECT</span> id <span style="color:#38bdf8">FROM</span> users<br>)</div>
+                        <div class="sd-count sdc-2">2 SQL queries</div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6">⚠️ Uses a nested subquery — slightly heavier than selectinload. Choose for very large collections.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 2 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">Using Joins Efficiently</div>
+        <div class="part-desc">How to let the database combine tables at query time instead of doing it in Python with multiple round-trips.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 2 ══ -->
+<section class="section" id="s2">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">02 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Efficient Joins — One Trip Instead of Many</h2>
+            <div class="sec-copy">
+                <p>Joins combine rows from two or more tables based on a related column. The database executes the combination using its indexes — far faster than fetching both tables separately and merging them in Python.</p>
+                <p>The most common mistake is running two sequential queries then combining results with Python list comprehensions. A single <code class="ic">.join()</code> call consolidates both into one network round-trip and lets the database optimise the execution plan.</p>
+            </div>
+            <div class="callout">
+                <div class="callout-hl">The database is better at joins than Python is</div>
+                <p>The DB uses B-tree indexes, hash joins, and query planner optimisations to combine tables. Python iterates over two lists in memory. At scale, the DB wins by orders of magnitude.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">JOIN — QUERY AND FILTER PATTERNS</span></div>
+                <pre><code><span class="cc"># Inner join — only rows that match on both sides</span>
+results = session.<span class="cm">query</span>(<span class="cf">User</span>, <span class="cf">Address</span>).\
+    <span class="cm">join</span>(<span class="cf">Address</span>).\
+    <span class="cm">filter</span>(<span class="cf">User</span>.name == <span class="cs">'Alice'</span>).\
+    <span class="cm">all</span>()
+
+<span class="ck">for</span> user, address <span class="ck">in</span> results:
+    <span class="cm">print</span>(user.name, address.city)
+
+
+<span class="cc"># Left outer join — include users with no address</span>
+results = session.<span class="cm">query</span>(<span class="cf">User</span>, <span class="cf">Address</span>).\
+    <span class="cm">outerjoin</span>(<span class="cf">Address</span>).\
+    <span class="cm">all</span>()
+
+
+<span class="cc"># Explicit join condition</span>
+results = session.<span class="cm">query</span>(<span class="cf">User</span>, <span class="cf">Address</span>).\
+    <span class="cm">join</span>(<span class="cf">Address</span>, <span class="cf">User</span>.id == <span class="cf">Address</span>.user_id).\
+    <span class="cm">all</span>()
+
+
+<span class="cc"># Chain multiple joins</span>
+results = session.<span class="cm">query</span>(<span class="cf">User</span>).\
+    <span class="cm">join</span>(<span class="cf">User</span>.orders).\
+    <span class="cm">join</span>(<span class="cf">Order</span>.items).\
+    <span class="cm">filter</span>(<span class="cf">Item</span>.price > <span class="cn">100</span>).\
+    <span class="cm">all</span>()</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 4: Join Anatomy ── -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">JOIN Anatomy — How Two Tables Become One Result</div>
+        <div class="diag-sub">A JOIN matches rows from both tables on a shared key. The database does this internally — you get back one combined result set.</div>
+        <div class="join-anatomy">
+            <div class="ja-title">users JOIN addresses ON addresses.user_id = users.id</div>
+            <div class="ja-flow">
+                <!-- users table -->
+                <div class="ja-table">
+                    <div class="ja-th">users</div>
+                    <div class="ja-cols">
+                        <div class="ja-col-h">id</div>
+                        <div class="ja-col-h">name</div>
+                        <div class="ja-col-h">email</div>
+                    </div>
+                    <div class="ja-row hi">
+                        <div class="ja-cell pk">1</div>
+                        <div class="ja-cell">Alice</div>
+                        <div class="ja-cell">alice@co</div>
+                    </div>
+                    <div class="ja-row">
+                        <div class="ja-cell pk">2</div>
+                        <div class="ja-cell">Bob</div>
+                        <div class="ja-cell">bob@co</div>
+                    </div>
+                    <div class="ja-row">
+                        <div class="ja-cell pk">3</div>
+                        <div class="ja-cell">Carol</div>
+                        <div class="ja-cell">carol@co</div>
+                    </div>
+                </div>
+
+                <!-- operator -->
+                <div class="ja-operator">
+                    <div class="ja-op-icon">⋈</div>
+                    <div class="ja-op-label">JOIN<br>ON<br>user_id</div>
+                </div>
+
+                <!-- addresses table -->
+                <div class="ja-table">
+                    <div class="ja-th blue">addresses</div>
+                    <div class="ja-cols">
+                        <div class="ja-col-h">id</div>
+                        <div class="ja-col-h">user_id</div>
+                        <div class="ja-col-h">city</div>
+                    </div>
+                    <div class="ja-row hi">
+                        <div class="ja-cell pk">1</div>
+                        <div class="ja-cell fk">1</div>
+                        <div class="ja-cell">London</div>
+                    </div>
+                    <div class="ja-row hi">
+                        <div class="ja-cell pk">2</div>
+                        <div class="ja-cell fk">1</div>
+                        <div class="ja-cell">Paris</div>
+                    </div>
+                    <div class="ja-row">
+                        <div class="ja-cell pk">3</div>
+                        <div class="ja-cell fk">2</div>
+                        <div class="ja-cell">Tokyo</div>
+                    </div>
+                </div>
+
+                <!-- arrow -->
+                <div class="ja-operator">
+                    <div class="ja-op-icon" style="color:var(--orange)">→</div>
+                    <div class="ja-op-label" style="color:rgba(240,165,0,0.5)">RESULT</div>
+                </div>
+
+                <!-- result table -->
+                <div class="ja-table ja-result">
+                    <div class="ja-th" style="color:#86efac">result set</div>
+                    <div class="ja-cols">
+                        <div class="ja-col-h">name</div>
+                        <div class="ja-col-h">city</div>
+                    </div>
+                    <div class="ja-row hi">
+                        <div class="ja-cell" style="color:var(--orange)">Alice</div>
+                        <div class="ja-cell">London</div>
+                    </div>
+                    <div class="ja-row hi">
+                        <div class="ja-cell" style="color:var(--orange)">Alice</div>
+                        <div class="ja-cell">Paris</div>
+                    </div>
+                    <div class="ja-row">
+                        <div class="ja-cell">Bob</div>
+                        <div class="ja-cell">Tokyo</div>
+                    </div>
+                    <div class="ja-row" style="background:rgba(239,68,68,0.06)">
+                        <div class="ja-cell" style="color:rgba(255,255,255,0.3);font-style:italic">Carol</div>
+                        <div class="ja-cell" style="color:rgba(255,255,255,0.25);font-style:italic">NULL (no addr)</div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.35);line-height:1.7">
+                Alice appears twice because she has two addresses — one row per matching pair. Carol appears with NULL because she has no address (LEFT OUTER JOIN keeps her). Bob appears once with his Tokyo address. The DB performs this in one optimised pass using indexes.
+            </div>
+        </div>
+    </div>
+
+    <!-- Inefficient vs efficient compare -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Inefficient vs. Efficient Pattern</div>
+        <div class="diag-sub">Two sequential queries combined in Python vs. one joined query handled by the database.</div>
+        <div class="join-compare">
+            <div class="jc-side jc-bad">
+                <div class="jc-label">❌ INEFFICIENT — two round-trips</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">MULTIPLE QUERIES</span></div>
+                    <pre><code><span class="cc"># Round-trip 1 — fetch users</span>
+users = session.<span class="cm">query</span>(<span class="cf">User</span>).\
+    <span class="cm">filter</span>(<span class="cf">User</span>.name == <span class="cs">'Alice'</span>).\
+    <span class="cm">all</span>()
+
+<span class="cc"># Round-trip 2 — fetch addresses separately</span>
+addresses = session.<span class="cm">query</span>(<span class="cf">Address</span>).\
+    <span class="cm">filter</span>(
+        <span class="cf">Address</span>.user_id.<span class="cm">in_</span>(
+            [u.id <span class="ck">for</span> u <span class="ck">in</span> users]
+        )
+    ).<span class="cm">all</span>()
+
+<span class="cc"># Python combines them — slow at scale</span></code></pre>
+                </div>
+            </div>
+            <div class="jc-sep">→</div>
+            <div class="jc-side jc-good">
+                <div class="jc-label">✅ EFFICIENT — single joined query</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SINGLE JOIN QUERY</span></div>
+                    <pre><code><span class="cc"># One round-trip — DB does the combining</span>
+results = session.<span class="cm">query</span>(<span class="cf">User</span>, <span class="cf">Address</span>).\
+    <span class="cm">join</span>(<span class="cf">Address</span>).\
+    <span class="cm">filter</span>(<span class="cf">User</span>.name == <span class="cs">'Alice'</span>).\
+    <span class="cm">all</span>()
+
+<span class="cc"># Unpack tuples directly — already merged</span>
+<span class="ck">for</span> user, address <span class="ck">in</span> results:
+    <span class="cm">print</span>(user.name, address.city)
+
+<span class="cc"># DB uses indexes on both tables</span>
+<span class="cc"># All filtering happens before data leaves DB</span></code></pre>
+                </div>
+            </div>
+        </div>
+        <div class="callout callout-blue" style="margin-top:0">
+            <div class="callout-hl">Why this matters at scale</div>
+            <p>With two queries, all user IDs travel across the network before the address lookup starts. With one JOIN, the database filters on both tables simultaneously using their indexes — the result set sent over the wire is already the final answer.</p>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 3 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Caching Strategies</div>
+        <div class="part-desc">Two approaches — dogpile.cache for production-grade query caching and lru_cache for simple in-process memoisation.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 3 ══ -->
+<section class="section" id="s3">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Caching — Stop Asking the Database the Same Question Twice</h2>
+            <div class="sec-copy">
+                <p>Eager loading and joins reduce the <em>number</em> of queries per request. Caching eliminates database calls <em>entirely</em> for data that hasn't changed. If a user profile looked the same 30 seconds ago, there is no reason to hit the database again.</p>
+                <p>Two patterns cover most cases: <strong>dogpile.cache</strong> — production-grade, works with Redis or Memcached, configurable TTL per function — and <strong>lru_cache</strong> — Python's built-in, in-process only, resets on restart. Start with <code class="ic">lru_cache</code>, upgrade to <code class="ic">dogpile.cache</code> when you need shared caching across multiple processes.</p>
+            </div>
+            <div class="callout callout-purple">
+                <div class="callout-hl">Best data for caching</div>
+                <p>Cache data that is <strong>read often, written rarely</strong>: user profiles, product catalogues, config values, country lists. Do not cache real-time data like inventory count, order status, or live prices.</p>
+            </div>
+        </div>
+
+        <!-- ── DIAGRAM 5: Cache Flowchart ── -->
+        <div class="reveal">
+            <div class="flowchart">
+                <div class="fc-title">Cache decision flowchart — what happens on each request</div>
+                <div class="fc-wrap">
+                    <div class="fc-node fc-start">Request: get_user("Alice")</div>
+                    <div class="fc-arrow">↓</div>
+                    <div class="fc-node fc-action">Check cache for key<br><code style="font-size:10px;font-family:'Courier New',monospace;color:rgba(255,255,255,0.6)">"get_user:Alice"</code></div>
+                    <div class="fc-arrow">↓</div>
+                    <!-- Diamond decision -->
+                    <div style="position:relative;width:200px;height:60px;margin:4px 0">
+                        <div style="position:absolute;inset:0;background:rgba(59,130,246,0.15);border:2px solid rgba(59,130,246,0.4);transform:rotate(45deg) scale(0.7);border-radius:6px"></div>
+                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93c5fd">Cache Hit?</div>
+                    </div>
+                    <div class="fc-arrow">↓</div>
+                    <div class="fc-split">
+                        <div class="fc-split-branch">
+                            <span class="fc-branch-label fc-hit-label">YES — HIT</span>
+                            <div class="fc-arrow">↓</div>
+                            <div class="fc-node fc-yes">Return cached<br>result immediately</div>
+                            <div class="fc-arrow">↓</div>
+                            <div style="font-size:10px;font-weight:700;color:rgba(34,197,94,0.6);text-align:center">⚡ No DB query</div>
+                        </div>
+                        <div style="display:flex;align-items:center;font-size:20px;color:rgba(255,255,255,0.15);padding-top:24px">│</div>
+                        <div class="fc-split-branch">
+                            <span class="fc-branch-label fc-miss-label">NO — MISS</span>
+                            <div class="fc-arrow">↓</div>
+                            <div class="fc-node fc-no">Query the database</div>
+                            <div class="fc-arrow">↓</div>
+                            <div class="fc-node fc-action">Store result in cache<br>with TTL (e.g. 1 hour)</div>
+                            <div class="fc-arrow">↓</div>
+                            <div style="font-size:10px;font-weight:700;color:rgba(239,68,68,0.6);text-align:center">🗄 1 DB query</div>
+                        </div>
+                    </div>
+                    <div class="fc-arrow" style="margin-top:12px">↓</div>
+                    <div class="fc-node fc-end">Return result to caller</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Both caching patterns -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="two-col">
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">Pattern 1 — Query Caching with dogpile.cache</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Production-grade. Redis or Memcached backend. Configurable TTL per function. Shared across processes.</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">dogpile.cache</span></div>
+                    <pre><code><span class="ck">from</span> dogpile.cache <span class="ck">import</span> make_region
+
+<span class="cc"># Configure once — swap backend without changing code</span>
+region = <span class="cm">make_region</span>().<span class="cm">configure</span>(
+    <span class="cs">'dogpile.cache.memcached'</span>,
+    expiration_time=<span class="cn">3600</span>,    <span class="cc"># 1-hour TTL</span>
+    arguments={<span class="cs">'url'</span>: [<span class="cs">"127.0.0.1"</span>]}
+)
+
+<span class="cc"># Decorate — result cached on first call</span>
+@region.<span class="cm">cache_on_arguments</span>()
+<span class="ck">def</span> <span class="cf">get_user_by_name</span>(name):
+    <span class="ck">return</span> session.<span class="cm">query</span>(<span class="cf">User</span>).\
+        <span class="cm">filter_by</span>(name=name).<span class="cm">first</span>()
+
+<span class="cc"># Call 1 — hits DB, stores in Memcached</span>
+user = <span class="cm">get_user_by_name</span>(<span class="cs">"Alice"</span>)
+
+<span class="cc"># Call 2 — returns from cache, no DB</span>
+user = <span class="cm">get_user_by_name</span>(<span class="cs">"Alice"</span>)
+
+<span class="cc"># Different arg = different cache key</span>
+user = <span class="cm">get_user_by_name</span>(<span class="cs">"Bob"</span>)  <span class="cc"># cache miss</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">Pattern 2 — Result Set Caching with lru_cache</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Built into Python. In-process only. Resets on restart. Best for small stable datasets.</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">lru_cache + pickle</span></div>
+                    <pre><code><span class="ck">import</span> pickle
+<span class="ck">from</span> functools <span class="ck">import</span> lru_cache
+
+<span class="cc"># Cache up to 128 unique results in memory</span>
+@<span class="cm">lru_cache</span>(maxsize=<span class="cn">128</span>)
+<span class="ck">def</span> <span class="cf">get_all_users</span>():
+    users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">all</span>()
+    <span class="ck">return</span> <span class="cm">pickle</span>.<span class="cm">dumps</span>(
+        [user.__dict__ <span class="ck">for</span> user <span class="ck">in</span> users]
+    )
+
+<span class="ck">def</span> <span class="cf">fetch_users</span>():
+    <span class="ck">return</span> <span class="cm">pickle</span>.<span class="cm">loads</span>(<span class="cm">get_all_users</span>())
+
+<span class="cc"># Invalidate when data changes</span>
+<span class="ck">def</span> <span class="cf">create_user</span>(name, email):
+    user = <span class="cf">User</span>(name=name, email=email)
+    session.<span class="cm">add</span>(user)
+    session.<span class="cm">commit</span>()
+    <span class="cm">get_all_users</span>.<span class="cm">cache_clear</span>()  <span class="cc"># ← important!</span>
+
+<span class="cc"># Inspect cache performance</span>
+<span class="cm">print</span>(<span class="cm">get_all_users</span>.<span class="cm">cache_info</span>())
+<span class="cc"># CacheInfo(hits=12, misses=1, maxsize=128, currsize=1)</span></code></pre>
+                </div>
+                <div class="callout callout-green" style="margin-top:0">
+                    <div class="callout-hl">lru_cache vs dogpile.cache</div>
+                    <p>Use <code class="ic">lru_cache</code> for single-process apps. Use <code class="ic">dogpile.cache</code> with Redis when the cache must survive restarts, be shared across workers, or expire at predictable intervals.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cache comparison table -->
+    <div class="reveal" style="margin-top:40px">
+        <div class="diag-title">Caching Options Comparison Table</div>
+        <div class="diag-sub">Choose the right tool for your deployment scenario.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:12px 18px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Feature</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#78350f;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(240,165,0,0.06)">lru_cache</th>
+                        <th style="padding:12px 18px;text-align:center;font-size:11px;font-weight:700;color:#14532d;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);background:rgba(34,197,94,0.06)">dogpile.cache</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Setup complexity</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:13px;color:var(--muted);background:rgba(240,165,0,0.03)">Zero — built into Python</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:13px;color:var(--muted);background:rgba(34,197,94,0.03)">pip install + configure backend</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Shared across workers</td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(240,165,0,0.03)"><span style="color:#991b1b;font-weight:700">No — per process only</span></td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(34,197,94,0.03)"><span style="color:#14532d;font-weight:700">Yes — Redis/Memcached</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Survives app restart</td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(240,165,0,0.03)"><span style="color:#991b1b;font-weight:700">No — clears on restart</span></td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(34,197,94,0.03)"><span style="color:#14532d;font-weight:700">Yes — stored externally</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">TTL (auto-expiry)</td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(240,165,0,0.03)"><span style="color:#991b1b;font-weight:700">No — manual cache_clear()</span></td>
+                        <td style="padding:11px 18px;text-align:center;background:rgba(34,197,94,0.03)"><span style="color:#14532d;font-weight:700">Yes — per-function TTL</span></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:11px 18px;font-size:13px;font-weight:600;color:var(--dark)">Best for</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:12.5px;color:var(--muted);background:rgba(240,165,0,0.03)">Small apps, CLIs, single-process</td>
+                        <td style="padding:11px 18px;text-align:center;font-size:12.5px;color:var(--muted);background:rgba(34,197,94,0.03)">Web APIs, multi-worker servers</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 4 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">04</div>
+    <div>
+        <div class="part-title">Additional Performance Techniques</div>
+        <div class="part-desc">EXPLAIN ANALYZE, bulk operations, indexing, and connection pool tuning — the tools that complete the performance picture.</div>
+    </div>
+</div>
+
+<!-- ══ SECTION 4 ══ -->
+<section class="section" id="s4">
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">04 / 04</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Profiling, Bulk Ops, Indexing &amp; Pooling</h2>
+        <div class="sec-copy" style="max-width:700px">
+            <p>These four techniques support the first three. Use <code class="ic">EXPLAIN ANALYZE</code> to find which queries need optimising, bulk operations to handle mass writes, indexes to speed up <code class="ic">WHERE</code> filters, and pool tuning to serve concurrent requests without exhausting connections.</p>
+        </div>
+    </div>
+
+    <div class="reveal" style="margin-top:36px">
+        <div class="perf-grid">
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-blue">🔍</div>
+                    <div class="pc-name">Query Execution Plans</div>
+                </div>
+                <div class="pc-body">Use <code class="ic">EXPLAIN ANALYZE</code> to see exactly how the DB runs a query — which indexes are used, how many rows are scanned, where the time is spent. Run it before adding an index to confirm it is actually needed.</div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-green">⚡</div>
+                    <div class="pc-name">Bulk Operations</div>
+                </div>
+                <div class="pc-body">Updating or inserting many rows in a loop is slow. A single <code class="ic">.update()</code> with <code class="ic">WHERE id IN (…)</code> sends one SQL statement — bypasses per-object ORM overhead and is orders of magnitude faster.</div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-purple">📑</div>
+                    <div class="pc-name">Proper Indexing</div>
+                </div>
+                <div class="pc-body">Every column in a <code class="ic">WHERE</code>, <code class="ic">ORDER BY</code>, or <code class="ic">JOIN ON</code> clause should have an index. Add them in <code class="ic">__table_args__</code> so Alembic tracks them as part of the schema.</div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-orange">🔌</div>
+                    <div class="pc-name">Connection Pool Tuning</div>
+                </div>
+                <div class="pc-body">The default pool is conservative. Tune <code class="ic">pool_size</code>, <code class="ic">max_overflow</code>, and <code class="ic">pool_recycle</code> so the engine handles concurrent web requests without waiting for a free connection.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DIAGRAM 6: EXPLAIN output visual ── -->
+    <div class="reveal" style="margin-top:48px">
+        <div class="diag-title">How to Read an EXPLAIN ANALYZE Output</div>
+        <div class="diag-sub">The output tells you whether the database used an index or did a slow full scan — and what to do about it.</div>
+        <div style="background:var(--dark);border-radius:14px;padding:28px 32px;margin-bottom:28px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:12px;letter-spacing:1px">❌ NO INDEX — Sequential Scan</div>
+                    <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:14px;font-family:'Courier New',monospace;font-size:12px;color:#d4d4d4;line-height:1.8">
+                        <span style="color:#ef4444">Seq Scan</span> on users<br>
+                        &nbsp;&nbsp;(cost=0.00..<span style="color:#ef4444">18540.00</span> rows=1)<br>
+                        &nbsp;&nbsp;Filter: (name = 'Alice')<br>
+                        &nbsp;&nbsp;Rows Removed by Filter: <span style="color:#ef4444">99999</span><br>
+                        Planning Time: 0.1 ms<br>
+                        Execution Time: <span style="color:#ef4444">340 ms</span>
+                    </div>
+                    <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65">
+                        <strong style="color:#ef4444">Seq Scan</strong> = reading every row in the table. Removed 99,999 rows to find 1. This needs an index on <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.6)">name</code>.
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#22c55e;margin-bottom:12px;letter-spacing:1px">✅ WITH INDEX — Index Scan</div>
+                    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:14px;font-family:'Courier New',monospace;font-size:12px;color:#d4d4d4;line-height:1.8">
+                        <span style="color:#22c55e">Index Scan</span> using ix_user_name<br>
+                        &nbsp;&nbsp;(cost=0.42..<span style="color:#22c55e">8.44</span> rows=1)<br>
+                        &nbsp;&nbsp;Index Cond: (name = 'Alice')<br>
+                        &nbsp;&nbsp;Rows Removed by Filter: <span style="color:#22c55e">0</span><br>
+                        Planning Time: 0.2 ms<br>
+                        Execution Time: <span style="color:#22c55e">0.08 ms</span>
+                    </div>
+                    <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65">
+                        <strong style="color:#22c55e">Index Scan</strong> = jumped directly to the matching row using the B-tree index. 340 ms → 0.08 ms. A 4,000× speedup from one line in <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.6)">__table_args__</code>.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reveal">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">EXPLAIN ANALYZE + BULK UPDATE</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> text
+
+<span class="cc"># ── Run EXPLAIN ANALYZE on any slow query ──</span>
+<span class="ck">with</span> engine.<span class="cm">connect</span>() <span class="ck">as</span> conn:
+    plan = conn.<span class="cm">execute</span>(<span class="cm">text</span>(
+        <span class="cs">"EXPLAIN ANALYZE SELECT * FROM users WHERE name = 'Alice'"</span>
+    ))
+    <span class="ck">for</span> row <span class="ck">in</span> plan:
+        <span class="cm">print</span>(row[<span class="cn">0</span>])
+    <span class="cc"># Look for "Seq Scan" → means you need an index</span>
+    <span class="cc"># Look for "Index Scan" → already optimised</span>
+
+
+<span class="cc"># ── Bulk update — one statement, not a loop ──</span>
+session.<span class="cm">query</span>(<span class="cf">User</span>).\
+    <span class="cm">filter</span>(<span class="cf">User</span>.id.<span class="cm">in_</span>([u.id <span class="ck">for</span> u <span class="ck">in</span> users])).\
+    <span class="cm">update</span>(
+        {<span class="cs">"status"</span>: <span class="cs">"active"</span>},
+        synchronize_session=<span class="ck">False</span>
+    )
+session.<span class="cm">commit</span>()
+<span class="cc"># UPDATE users SET status='active' WHERE id IN (…)</span>
+<span class="cc"># One query regardless of list size</span></code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">INDEXES IN MODEL + POOL TUNING</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> Index, create_engine
+
+<span class="cc"># ── Indexes in __table_args__ ──</span>
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">'users'</span>
+    id    = <span class="cf">Column</span>(<span class="cf">Integer</span>, primary_key=<span class="ck">True</span>)
+    name  = <span class="cf">Column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+    email = <span class="cf">Column</span>(<span class="cf">String</span>(<span class="cn">50</span>))
+
+    __table_args__ = (
+        <span class="cf">Index</span>(<span class="cs">'ix_user_name'</span>,  <span class="cs">'name'</span>),
+        <span class="cf">Index</span>(<span class="cs">'ix_user_email'</span>, <span class="cs">'email'</span>),
+    )
+
+
+<span class="cc"># ── Connection pool tuning ──</span>
+engine = <span class="cm">create_engine</span>(
+    <span class="cs">'postgresql://user:pass@localhost/dbname'</span>,
+    pool_size=<span class="cn">10</span>,       <span class="cc"># persistent connections</span>
+    max_overflow=<span class="cn">20</span>,    <span class="cc"># burst connections under load</span>
+    pool_recycle=<span class="cn">3600</span>,  <span class="cc"># recycle every 1 hour</span>
+)
+<span class="cc"># max 30 simultaneous connections before queuing</span></code></pre>
+                </div>
+                <div class="callout callout-green" style="margin-top:0">
+                    <div class="callout-hl">Always measure first</div>
+                    <p>Run <code class="ic">EXPLAIN ANALYZE</code> before adding an index, enabling eager loading, or adding a cache. Optimization without measurement wastes time and can make things worse.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 5 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">05</div>
+    <div>
+        <div class="part-title">Pagination</div>
+        <div class="part-desc">Every list endpoint needs pagination. Learn offset/limit and cursor-based approaches — and when to use each.</div>
+    </div>
+</div>
+
+<section class="section" id="s5">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">05 / 05</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Pagination — Returning Results in Pages, Not All at Once</h2>
+            <div class="sec-copy">
+                <p>Imagine a table with 100,000 products. If your API returns all of them in one response, it will be slow, memory-heavy, and crash slow clients. <strong>Pagination</strong> splits the result into pages — the client asks for page 1, then page 2, and so on.</p>
+                <p>There are two common strategies. <strong>Offset/limit</strong> is simple and works for most use cases. <strong>Cursor-based</strong> is more efficient for very large tables or real-time feeds where new rows are being added while the user is paginating.</p>
+            </div>
+            <div class="callout">
+                <div class="callout-hl">Always paginate list endpoints</div>
+                <p>Never return an unbounded list from an API. Even if your table has only 500 rows today, it will eventually have 500,000. Pagination is a habit, not a feature.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:24px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">Offset / Limit — visualised</div>
+                <div style="display:flex;flex-direction:column;gap:0">
+                    <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase">Page 1</div>
+                        <div style="display:flex;gap:4px">
+                            <div style="height:22px;flex:1;background:rgba(240,165,0,0.3);border:1px solid rgba(240,165,0,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--orange)">1</div>
+                            <div style="height:22px;flex:1;background:rgba(240,165,0,0.3);border:1px solid rgba(240,165,0,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--orange)">2</div>
+                            <div style="height:22px;flex:1;background:rgba(240,165,0,0.3);border:1px solid rgba(240,165,0,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--orange)">3</div>
+                            <div style="height:22px;flex:1;background:rgba(240,165,0,0.3);border:1px solid rgba(240,165,0,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--orange)">4</div>
+                            <div style="height:22px;flex:1;background:rgba(240,165,0,0.3);border:1px solid rgba(240,165,0,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--orange)">5</div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:3px"></div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase">Page 2</div>
+                        <div style="display:flex;gap:4px">
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:3px"></div>
+                            <div style="height:22px;flex:1;background:rgba(59,130,246,0.3);border:1px solid rgba(59,130,246,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#93c5fd">6</div>
+                            <div style="height:22px;flex:1;background:rgba(59,130,246,0.3);border:1px solid rgba(59,130,246,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#93c5fd">7</div>
+                            <div style="height:22px;flex:1;background:rgba(59,130,246,0.3);border:1px solid rgba(59,130,246,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#93c5fd">…</div>
+                        </div>
+                    </div>
+                    <div style="padding:10px 0;font-size:11px;color:rgba(255,255,255,0.4)">
+                        Page 1 = <code style="font-family:'Courier New',monospace;color:var(--orange)">LIMIT 5 OFFSET 0</code><br>
+                        Page 2 = <code style="font-family:'Courier New',monospace;color:#93c5fd">LIMIT 5 OFFSET 5</code><br>
+                        Page N = <code style="font-family:'Courier New',monospace;color:rgba(255,255,255,0.4)">LIMIT 5 OFFSET (N-1)*5</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reveal" style="margin-top:40px">
+        <div class="two-col">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">OFFSET / LIMIT PAGINATION</span></div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> select, func
+
+<span class="cc"># ── Basic offset/limit ──</span>
+<span class="ck">def</span> <span class="cf">get_products</span>(session, page: int = <span class="cn">1</span>, per_page: int = <span class="cn">20</span>):
+    offset = (page - <span class="cn">1</span>) * per_page
+    items = session.<span class="cm">scalars</span>(
+        <span class="cm">select</span>(<span class="cf">Product</span>)
+        .<span class="cm">order_by</span>(<span class="cf">Product</span>.created_at.<span class="cm">desc</span>())
+        .<span class="cm">limit</span>(per_page)
+        .<span class="cm">offset</span>(offset)
+    ).<span class="cm">all</span>()
+    <span class="ck">return</span> items
+
+<span class="cc"># ── With total count (for "Page X of Y") ──</span>
+<span class="ck">def</span> <span class="cf">get_products_with_total</span>(session, page: int = <span class="cn">1</span>, per_page: int = <span class="cn">20</span>):
+    offset = (page - <span class="cn">1</span>) * per_page
+
+    total = session.<span class="cm">scalar</span>(<span class="cm">select</span>(<span class="cm">func</span>.count()).<span class="cm">select_from</span>(<span class="cf">Product</span>))
+    items = session.<span class="cm">scalars</span>(
+        <span class="cm">select</span>(<span class="cf">Product</span>)
+        .<span class="cm">order_by</span>(<span class="cf">Product</span>.id)
+        .<span class="cm">limit</span>(per_page)
+        .<span class="cm">offset</span>(offset)
+    ).<span class="cm">all</span>()
+
+    <span class="ck">return</span> {
+        <span class="cs">"items"</span>:      items,
+        <span class="cs">"total"</span>:      total,
+        <span class="cs">"page"</span>:       page,
+        <span class="cs">"per_page"</span>:   per_page,
+        <span class="cs">"total_pages"</span>: -(-total // per_page)  <span class="cc"># ceiling division</span>
+    }</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">CURSOR-BASED PAGINATION</span></div>
+                    <pre><code><span class="cc"># ── Cursor-based: no OFFSET — uses last seen ID ──</span>
+<span class="cc"># Better for large tables and real-time feeds</span>
+
+<span class="ck">def</span> <span class="cf">get_products_after</span>(session, after_id=<span class="ck">None</span>, limit: int = <span class="cn">20</span>):
+    query = <span class="cm">select</span>(<span class="cf">Product</span>).<span class="cm">order_by</span>(<span class="cf">Product</span>.id).<span class="cm">limit</span>(limit)
+
+    <span class="ck">if</span> after_id:
+        <span class="cc"># Only rows AFTER the last ID the client saw</span>
+        query = query.<span class="cm">where</span>(<span class="cf">Product</span>.id > after_id)
+
+    items = session.<span class="cm">scalars</span>(query).<span class="cm">all</span>()
+    next_cursor = items[-<span class="cn">1</span>].id <span class="ck">if</span> <span class="cm">len</span>(items) == limit <span class="ck">else</span> <span class="ck">None</span>
+
+    <span class="ck">return</span> {<span class="cs">"items"</span>: items, <span class="cs">"next_cursor"</span>: next_cursor}
+    <span class="cc"># Client passes next_cursor as after_id in their next request</span>
+    <span class="cc"># No OFFSET means no "skipping rows" performance cost</span></code></pre>
+                </div>
+                <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-top:14px">
+                    <div style="padding:10px 16px;background:#f8f8f8;border-bottom:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Offset vs Cursor — when to use each</div></div>
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead><tr style="background:#f8f8f8"><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)"></th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">Offset/Limit</th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">Cursor</th></tr></thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Simplicity</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">✅ Very simple</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">⚠️ More complex</td></tr>
+                            <tr style="border-bottom:1px solid var(--border);background:#fafafa"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Large tables</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">⚠️ Slow at high offsets</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">✅ Always fast</td></tr>
+                            <tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Jump to page N</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">✅ Easy</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">❌ Not possible</td></tr>
+                            <tr><td style="padding:8px 14px;font-size:12px;font-weight:600;color:var(--dark)">Real-time feeds</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">⚠️ Rows can shift</td><td style="padding:8px 14px;font-size:12px;color:var(--muted)">✅ Stable</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">Up next — Module 08</div>
+            <div class="mf-title">Session <em>Management</em></div>
+        </div>
+        <a href="session-management.html" class="btn-next">
+            Start Module 08
+            <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

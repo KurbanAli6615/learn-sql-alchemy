@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Integration — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-done { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.3); }
+
+        /* HERO */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -40px; top: 50%; transform: translateY(-50%); font-size: clamp(80px,14vw,200px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -8px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-title { font-size: clamp(36px,5.5vw,68px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* LAYOUT */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px,3vw,38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* CALLOUTS */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #14532d; }
+        .callout-blue { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl { color: #1d4ed8; }
+        .callout-red { background: rgba(239,68,68,0.07); border-left-color: var(--red); }
+        .callout-red .callout-hl { color: #7f1d1d; }
+        .callout-purple { background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl { color: #581c87; }
+
+        /* CODE */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck{color:#CF7500} .cs{color:#87c264} .cc{color:#6b7280;font-style:italic}
+        .cf{color:#F0A500} .cn{color:#7ec8e3} .cm{color:#c084fc}
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* REVEAL */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* PART DIVIDER */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc  { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* FLOW DIAGRAM */
+        .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+        .flow-box { border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 700; text-align: center; flex-shrink: 0; }
+        .flow-arrow { color: rgba(255,255,255,0.25); font-size: 18px; padding: 0 4px; flex-shrink: 0; }
+
+        /* LIFECYCLE STEPS */
+        .lifecycle { display: flex; flex-direction: column; gap: 0; }
+        .lc-step { display: flex; gap: 16px; align-items: flex-start; }
+        .lc-left { display: flex; flex-direction: column; align-items: center; gap: 0; flex-shrink: 0; }
+        .lc-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+        .lc-line { width: 2px; flex: 1; min-height: 20px; }
+        .lc-body { padding-bottom: 20px; flex: 1; }
+        .lc-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .lc-desc  { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+        .lc-code  { font-family: 'Courier New',monospace; font-size: 11px; color: var(--orange); background: rgba(240,165,0,0.1); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-top: 5px; }
+
+        /* DI DIAGRAM */
+        .di-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 22px; }
+        .di-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; }
+        .di-card-label { font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+        .di-card-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .di-card-desc { font-size: 11.5px; color: rgba(255,255,255,0.4); line-height: 1.6; }
+
+        /* SERVICE LAYER DIAGRAM */
+        .layer-stack { display: flex; flex-direction: column; gap: 6px; }
+        .layer { border-radius: 10px; padding: 14px 18px; }
+        .layer-label { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; opacity: 0.6; }
+        .layer-name { font-size: 14px; font-weight: 700; }
+        .layer-desc { font-size: 11.5px; opacity: 0.6; margin-top: 3px; }
+        .layer-connector { display: flex; justify-content: center; }
+        .layer-connector svg { opacity: 0.3; }
+
+        /* COMPARISON TABLE */
+        .cmp-table { width: 100%; border-collapse: collapse; }
+        .cmp-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid var(--border); background: #f8f8f8; }
+        .cmp-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+        .cmp-table tr:last-child td { border-bottom: none; }
+
+        /* BADGE */
+        .badge-green { background: rgba(34,197,94,0.1); color: #14532d; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+        .badge-red   { background: rgba(239,68,68,0.1); color: #7f1d1d; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+        .badge-blue  { background: rgba(59,130,246,0.1); color: #1d4ed8; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+
+        /* PAGE VISUAL */
+        .page-vis { display: flex; gap: 2px; align-items: flex-end; height: 60px; }
+        .pv-bar { flex: 1; border-radius: 3px 3px 0 0; }
+
+        /* CHECKLIST */
+        .checklist { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+        .cl-item { display: flex; gap: 10px; align-items: flex-start; }
+        .cl-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+        .cl-text { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.55; }
+        .cl-text strong { color: #fff; }
+
+        /* FOOTER */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-home { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-home:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col { grid-template-columns: 1fr; gap: 28px; }
+            .di-grid { grid-template-columns: 1fr; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="async-sqlalchemy.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Async SQLAlchemy
+    </a>
+    <div class="nav-mid">
+        <a href="index.html" class="nav-home">
+            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Home
+        </a>
+        <span class="nav-sep">|</span>
+        <span class="nav-progress">Module <strong>11</strong></span>
+    </div>
+    <div class="nav-done" style="color:rgba(240,165,0,0.5);font-size:13px;font-weight:600">
+        Final Module ✦
+    </div>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">FASTAPI</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 11</span>
+        </div>
+        <h1 class="mod-title">FastAPI<em>Integration</em></h1>
+        <p class="mod-desc">
+            Connect everything you've learned into a production-ready API. <strong style="color:rgba(255,255,255,0.75)">Dependency injection</strong>, session-per-request lifecycle, service layer architecture, and paginated endpoints — the complete pattern used in real FastAPI applications.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Depends(db_session)</div>
+            <div class="chip"><div class="chip-dot"></div>Session lifecycle</div>
+            <div class="chip"><div class="chip-dot"></div>Service layer</div>
+            <div class="chip"><div class="chip-dot"></div>Pagination</div>
+            <div class="chip"><div class="chip-dot"></div>Error handling</div>
+            <div class="chip"><div class="chip-dot"></div>Full project structure</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<!-- PART 1 -->
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">The Full Stack Architecture</div>
+        <div class="part-desc">How all the pieces — FastAPI, SQLAlchemy, and the database — connect together through dependency injection.</div>
+    </div>
+</div>
+
+<!-- SECTION 1 -->
+<section class="section" id="s1">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">How a Request Flows Through the Stack</h2>
+            <div class="sec-copy">
+                <p>Every API request follows the same path. FastAPI receives it, resolves all dependencies (including your database session), calls your route handler, and then cleans up automatically. Understanding this flow tells you <strong>exactly where to put each piece of your code</strong>.</p>
+                <p>The key mechanism is <strong>dependency injection</strong> via <code class="ic">Depends()</code>. You declare what your route needs, and FastAPI constructs and provides it. Your route function never has to create or close a session — it just receives one and uses it.</p>
+                <p>Structuring your app in layers also makes it easy to test. Services can be tested without FastAPI. Routes can be tested without a real database. Each layer has a clear job.</p>
+            </div>
+
+            <div class="callout callout-blue">
+                <div class="callout-hl">Why layers?</div>
+                <p>Without layers, routes become long, hard to test, and hard to reuse. A service layer separates "what the API endpoint does" (route) from "how data is fetched/stored" (service). Each route stays under 10 lines. Each service function stays under 20.</p>
+            </div>
+        </div>
+
+        <!-- Architecture flow -->
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:26px 28px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:22px">Request → Response flow</div>
+
+                <div class="lifecycle">
+                    <div class="lc-step">
+                        <div class="lc-left">
+                            <div class="lc-dot" style="background:rgba(59,130,246,0.25);border:2px solid rgba(59,130,246,0.5);color:#60a5fa">1</div>
+                            <div class="lc-line" style="background:linear-gradient(rgba(59,130,246,0.4),rgba(240,165,0,0.4))"></div>
+                        </div>
+                        <div class="lc-body">
+                            <div class="lc-title">HTTP Request arrives</div>
+                            <div class="lc-desc">FastAPI matches the URL to a route. It reads the decorator to discover what dependencies the function needs.</div>
+                            <div class="lc-code">POST /users  →  create_user()</div>
+                        </div>
+                    </div>
+                    <div class="lc-step">
+                        <div class="lc-left">
+                            <div class="lc-dot" style="background:rgba(240,165,0,0.25);border:2px solid rgba(240,165,0,0.5);color:var(--orange)">2</div>
+                            <div class="lc-line" style="background:linear-gradient(rgba(240,165,0,0.4),rgba(168,85,247,0.4))"></div>
+                        </div>
+                        <div class="lc-body">
+                            <div class="lc-title">Depends(db_session) resolves</div>
+                            <div class="lc-desc">FastAPI calls your <code style="font-family:monospace;font-size:11px;color:var(--orange)">db_session()</code> generator. It creates the <code style="font-family:monospace;font-size:11px;color:var(--orange)">AsyncSession</code>, begins a transaction, and yields the session into the route.</div>
+                            <div class="lc-code">AsyncSession created + transaction begun</div>
+                        </div>
+                    </div>
+                    <div class="lc-step">
+                        <div class="lc-left">
+                            <div class="lc-dot" style="background:rgba(168,85,247,0.25);border:2px solid rgba(168,85,247,0.5);color:#c084fc">3</div>
+                            <div class="lc-line" style="background:linear-gradient(rgba(168,85,247,0.4),rgba(34,197,94,0.4))"></div>
+                        </div>
+                        <div class="lc-body">
+                            <div class="lc-title">Route handler runs</div>
+                            <div class="lc-desc">Your route function receives the session. It calls the service layer, which does the actual database work using the session.</div>
+                            <div class="lc-code">await user_service.create(session, data)</div>
+                        </div>
+                    </div>
+                    <div class="lc-step">
+                        <div class="lc-left">
+                            <div class="lc-dot" style="background:rgba(34,197,94,0.25);border:2px solid rgba(34,197,94,0.5);color:#4ade80">4</div>
+                            <div class="lc-line" style="background:linear-gradient(rgba(34,197,94,0.4),rgba(239,68,68,0.3))"></div>
+                        </div>
+                        <div class="lc-body">
+                            <div class="lc-title">Response is returned</div>
+                            <div class="lc-desc">FastAPI serialises the return value using the <code style="font-family:monospace;font-size:11px;color:#4ade80">response_model</code> Pydantic schema and sends the HTTP response.</div>
+                            <div class="lc-code">201 Created  { "id": 1, "name": "..." }</div>
+                        </div>
+                    </div>
+                    <div class="lc-step">
+                        <div class="lc-left">
+                            <div class="lc-dot" style="background:rgba(239,68,68,0.2);border:2px solid rgba(239,68,68,0.4);color:#fca5a5">5</div>
+                        </div>
+                        <div class="lc-body" style="padding-bottom:0">
+                            <div class="lc-title">Cleanup: session closed automatically</div>
+                            <div class="lc-desc">FastAPI resumes the <code style="font-family:monospace;font-size:11px;color:#fca5a5">db_session()</code> generator after the route returns. The <code style="font-family:monospace;font-size:11px;color:#fca5a5">async with</code> block exits, the session is closed, and the connection is returned to the pool. On exception, rollback happens here.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4-layer architecture diagram -->
+    <div class="reveal" style="margin-top:56px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">The Four Layers — What Goes Where</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:26px">Each layer has exactly one responsibility. This is the standard FastAPI + SQLAlchemy project structure.</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+            <div style="background:var(--dark);border-radius:12px;overflow:hidden">
+                <div style="background:rgba(59,130,246,0.2);border-bottom:2px solid rgba(59,130,246,0.5);padding:12px 16px">
+                    <div style="font-size:10px;font-weight:800;color:#60a5fa;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Layer 1</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff">Routes</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">routers/users.py</div>
+                </div>
+                <div style="padding:14px 16px">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.7">• Define HTTP endpoints<br>• Parse request input<br>• Call the service<br>• Return the response<br><br><span style="color:rgba(255,255,255,0.25);font-style:italic">No SQL here. No business logic.</span></div>
+                </div>
+            </div>
+            <div style="background:var(--dark);border-radius:12px;overflow:hidden">
+                <div style="background:rgba(240,165,0,0.2);border-bottom:2px solid rgba(240,165,0,0.5);padding:12px 16px">
+                    <div style="font-size:10px;font-weight:800;color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Layer 2</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff">Service</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">services/user_service.py</div>
+                </div>
+                <div style="padding:14px 16px">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.7">• Business logic<br>• Orchestrates queries<br>• Validates data rules<br>• Raises app errors<br><br><span style="color:rgba(255,255,255,0.25);font-style:italic">Receives the session. Uses it.</span></div>
+                </div>
+            </div>
+            <div style="background:var(--dark);border-radius:12px;overflow:hidden">
+                <div style="background:rgba(168,85,247,0.2);border-bottom:2px solid rgba(168,85,247,0.5);padding:12px 16px">
+                    <div style="font-size:10px;font-weight:800;color:#c084fc;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Layer 3</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff">Models</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">models/user.py</div>
+                </div>
+                <div style="padding:14px 16px">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.7">• SQLAlchemy ORM models<br>• Table definitions<br>• Relationships<br>• Mixins (timestamps etc.)<br><br><span style="color:rgba(255,255,255,0.25);font-style:italic">No business logic. Pure schema.</span></div>
+                </div>
+            </div>
+            <div style="background:var(--dark);border-radius:12px;overflow:hidden">
+                <div style="background:rgba(34,197,94,0.2);border-bottom:2px solid rgba(34,197,94,0.5);padding:12px 16px">
+                    <div style="font-size:10px;font-weight:800;color:#4ade80;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Layer 4</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff">Schemas</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">schemas/user.py</div>
+                </div>
+                <div style="padding:14px 16px">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.7">• Pydantic models<br>• Request validation<br>• Response serialization<br>• OpenAPI docs shape<br><br><span style="color:rgba(255,255,255,0.25);font-style:italic">No SQL. No DB types.</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PART 2 -->
+<div class="part-divider reveal">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">The db_session Dependency — Session Per Request</div>
+        <div class="part-desc">The generator function that creates, provides, and cleans up an <code style="font-family:monospace;font-size:13px;color:var(--orange)">AsyncSession</code> for every request.</div>
+    </div>
+</div>
+
+<!-- SECTION 2 -->
+<section class="section" id="s2">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">02 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">The db_session Generator — Line by Line</h2>
+            <div class="sec-copy">
+                <p>The <code class="ic">db_session</code> function is the bridge between FastAPI and SQLAlchemy. It's an <strong>async generator</strong> — a function that uses <code class="ic">yield</code> to pause, hand control to FastAPI, and then resume after the request is done.</p>
+                <p>FastAPI calls this function before running the route, injects the yielded value as the <code class="ic">db</code> parameter, runs the route, and then resumes the generator for cleanup. The <code class="ic">try/finally</code> pattern ensures the session always closes — even if an exception occurs.</p>
+                <p>This is called a <strong>dependency with cleanup</strong> in FastAPI. The <code class="ic">yield</code> is the boundary between setup and teardown.</p>
+            </div>
+            <div class="callout callout-green">
+                <div class="callout-hl">One session per request — always</div>
+                <p>Create a fresh session at the start of each request, use it throughout, and close it at the end. Never share sessions between requests or create sessions inside service functions. The session is created once by the dependency and passed down through the call stack.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">core/db.py — the complete production db.py</span></div>
+                <pre><code><span class="ck">from</span> collections.abc <span class="ck">import</span> AsyncIterator
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> (
+    AsyncSession, async_sessionmaker, create_async_engine,
+)
+
+DATABASE_URL = <span class="cs">"postgresql+asyncpg://user:pass@localhost/db"</span>
+
+<span class="cc"># Engine — created ONCE at startup, shared forever</span>
+engine = <span class="cf">create_async_engine</span>(
+    DATABASE_URL,
+    pool_pre_ping=<span class="ck">True</span>,   <span class="cc"># test connections before use</span>
+    pool_recycle=<span class="cn">3600</span>,    <span class="cc"># refresh connections every hour</span>
+    pool_size=<span class="cn">10</span>,
+    max_overflow=<span class="cn">20</span>,
+)
+
+<span class="cc"># Session factory — configured ONCE at startup</span>
+async_session = <span class="cf">async_sessionmaker</span>(
+    engine,
+    expire_on_commit=<span class="ck">False</span>,  <span class="cc"># essential for async</span>
+)
+
+
+<span class="cc"># ── The FastAPI dependency ──</span>
+<span class="ck">async def</span> <span class="cf">db_session</span>() -&gt; <span class="cf">AsyncIterator</span>[<span class="cf">AsyncSession</span>]:
+    <span class="cc"># Everything BEFORE yield runs before the route handler</span>
+    <span class="ck">async with</span> async_session() <span class="ck">as</span> session:
+        <span class="ck">async with</span> session.<span class="cm">begin</span>():
+            <span class="cc"># yield hands the session to the route function</span>
+            <span class="ck">yield</span> session
+            <span class="cc"># After this point: auto-commit on success,</span>
+            <span class="cc"># auto-rollback on exception (handled by begin())</span>
+    <span class="cc"># session.close() is automatic via 'async with'</span>
+
+
+<span class="cc"># ── Type alias — cleaner route signatures ──</span>
+<span class="ck">from</span> typing <span class="ck">import</span> Annotated
+<span class="ck">from</span> fastapi <span class="ck">import</span> Depends
+
+DBSession = <span class="cf">Annotated</span>[<span class="cf">AsyncSession</span>, <span class="cf">Depends</span>(db_session)]
+<span class="cc"># Usage: async def my_route(db: DBSession): ...</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- What happens in exceptions -->
+    <div class="reveal" style="margin-top:48px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">Session Lifecycle: Success vs Exception</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:22px">The session behaves differently depending on whether the route succeeds or raises an exception. Both paths are handled automatically by the context managers.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div style="background:var(--dark);border-radius:12px;padding:22px 24px;border:1.5px solid rgba(34,197,94,0.3)">
+                <div style="font-size:11px;font-weight:800;color:#4ade80;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">✅ Successful request</div>
+                <div class="checklist">
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">1</div>
+                        <div class="cl-text">Request arrives, <code style="font-family:monospace;font-size:11px;color:#4ade80">db_session()</code> called</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">2</div>
+                        <div class="cl-text"><strong>AsyncSession created</strong>, transaction begun</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">3</div>
+                        <div class="cl-text">Session yielded to route handler</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">4</div>
+                        <div class="cl-text">Route runs successfully, returns response</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">5</div>
+                        <div class="cl-text"><strong>Transaction committed</strong> automatically</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(34,197,94,0.15);color:#4ade80">6</div>
+                        <div class="cl-text">Session closed, connection returned to pool</div>
+                    </div>
+                </div>
+            </div>
+            <div style="background:var(--dark);border-radius:12px;padding:22px 24px;border:1.5px solid rgba(239,68,68,0.3)">
+                <div style="font-size:11px;font-weight:800;color:#fca5a5;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">❌ Exception in route</div>
+                <div class="checklist">
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">1</div>
+                        <div class="cl-text">Request arrives, <code style="font-family:monospace;font-size:11px;color:#fca5a5">db_session()</code> called</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">2</div>
+                        <div class="cl-text"><strong>AsyncSession created</strong>, transaction begun</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">3</div>
+                        <div class="cl-text">Session yielded to route handler</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">4</div>
+                        <div class="cl-text">Route raises an exception (e.g. <code style="font-family:monospace;font-size:11px;color:#fca5a5">HTTPException</code>)</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">5</div>
+                        <div class="cl-text"><strong>Transaction rolled back</strong> automatically — no partial writes</div>
+                    </div>
+                    <div class="cl-item">
+                        <div class="cl-icon" style="background:rgba(239,68,68,0.15);color:#fca5a5">6</div>
+                        <div class="cl-text">Session closed, connection returned, error response sent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PART 3 -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Service Layer + Routes — The Full Pattern</div>
+        <div class="part-desc">Clean routes that call a service. Testable services that only care about data. No SQL in routes, no HTTP in services.</div>
+    </div>
+</div>
+
+<!-- SECTION 3 -->
+<section class="section" id="s3">
+    <!-- Without vs with -->
+    <div class="reveal">
+        <div class="sec-label"><span class="sec-n">03 / 04</span><div class="sec-rule"></div></div>
+        <h2 class="sec-title">Without a Service Layer vs With One</h2>
+        <div style="font-size:15px;color:#454748;line-height:1.8;margin-bottom:28px">See why routes with embedded business logic become unmaintainable, and how the service layer pattern fixes it.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:40px">
+            <div>
+                <div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.2);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+                    <div style="font-size:11px;font-weight:800;color:#7f1d1d;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">❌ Without service layer</div>
+                    <div style="font-size:12px;color:var(--muted);line-height:1.7">• SQL queries live inside route functions<br>• Business logic scattered across routes<br>• Impossible to test without HTTP<br>• Duplicate queries across routes<br>• Route files grow to 500+ lines</div>
+                </div>
+                <div class="cb" style="margin:0">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">❌ FAT ROUTE — hard to test</span></div>
+                    <pre><code><span class="cc"># Route doing everything itself — bad</span>
+@router.<span class="cm">post</span>(<span class="cs">"/users"</span>)
+<span class="ck">async def</span> <span class="cf">create_user</span>(
+    data: <span class="cf">UserCreate</span>,
+    db: <span class="cf">DBSession</span>,
+):
+    <span class="cc"># checking duplicates — business logic in route!</span>
+    existing = <span class="ck">await</span> db.<span class="cm">scalar</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(<span class="cf">User</span>.email == data.email)
+    )
+    <span class="ck">if</span> existing:
+        <span class="ck">raise</span> <span class="cf">HTTPException</span>(<span class="cn">400</span>, <span class="cs">"Email taken"</span>)
+
+    <span class="cc"># hashing — also business logic in route!</span>
+    hashed = <span class="cm">hash_password</span>(data.password)
+    user = <span class="cf">User</span>(email=data.email, password=hashed)
+    db.<span class="cm">add</span>(user)
+    <span class="ck">await</span> db.<span class="cm">flush</span>()
+    <span class="ck">return</span> user</code></pre>
+                </div>
+            </div>
+            <div>
+                <div style="background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.2);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+                    <div style="font-size:11px;font-weight:800;color:#14532d;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">✅ With service layer</div>
+                    <div style="font-size:12px;color:var(--muted);line-height:1.7">• Routes are thin — just parse + call + return<br>• Business logic is in testable service functions<br>• Services tested without FastAPI at all<br>• Services reused across multiple routes<br>• Each file stays small and focused</div>
+                </div>
+                <div class="cb" style="margin:0">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">✅ THIN ROUTE — service does the work</span></div>
+                    <pre><code><span class="cc"># Route is just: receive → delegate → return</span>
+@router.<span class="cm">post</span>(<span class="cs">"/users"</span>, response_model=<span class="cf">UserResponse</span>)
+<span class="ck">async def</span> <span class="cf">create_user</span>(
+    data: <span class="cf">UserCreate</span>,
+    db: <span class="cf">DBSession</span>,
+):
+    <span class="cc"># ALL the logic is in the service</span>
+    <span class="ck">return await</span> <span class="cf">user_service</span>.<span class="cm">create</span>(db, data)
+
+
+<span class="cc"># Service has the real logic — easy to unit-test</span>
+<span class="ck">class</span> <span class="cf">UserService</span>:
+    <span class="ck">async def</span> <span class="cf">create</span>(self, db: <span class="cf">AsyncSession</span>, data: <span class="cf">UserCreate</span>):
+        <span class="ck">if await</span> self.<span class="cm">_email_exists</span>(db, data.email):
+            <span class="ck">raise</span> <span class="cf">HTTPException</span>(<span class="cn">400</span>, <span class="cs">"Email taken"</span>)
+        user = <span class="cf">User</span>(
+            email=data.email,
+            password=<span class="cm">hash_password</span>(data.password),
+        )
+        db.<span class="cm">add</span>(user)
+        <span class="ck">await</span> db.<span class="cm">flush</span>()
+        <span class="ck">return</span> user</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full service example -->
+    <div class="reveal">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">Complete UserService — All CRUD Operations</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">The full service class covering get, list, create, update, and delete — the exact pattern used in production.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">services/user_service.py</span></div>
+                <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> select, func
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> AsyncSession
+<span class="ck">from</span> fastapi <span class="ck">import</span> HTTPException, status
+
+<span class="ck">class</span> <span class="cf">UserService</span>:
+
+    <span class="ck">async def</span> <span class="cf">get</span>(self, db: <span class="cf">AsyncSession</span>, user_id: int) -&gt; <span class="cf">User</span>:
+        user = <span class="ck">await</span> db.<span class="cm">get</span>(<span class="cf">User</span>, user_id)
+        <span class="ck">if not</span> user:
+            <span class="ck">raise</span> <span class="cf">HTTPException</span>(
+                status_code=<span class="cf">status</span>.HTTP_404_NOT_FOUND,
+                detail=<span class="cs">f"User </span>{user_id}<span class="cs"> not found"</span>,
+            )
+        <span class="ck">return</span> user
+
+    <span class="ck">async def</span> <span class="cf">list</span>(
+        self, db: <span class="cf">AsyncSession</span>,
+        offset: int = <span class="cn">0</span>, limit: int = <span class="cn">20</span>,
+    ):
+        result = <span class="ck">await</span> db.<span class="cm">execute</span>(
+            <span class="cm">select</span>(<span class="cf">User</span>)
+            .<span class="cm">where</span>(<span class="cf">User</span>.is_active.<span class="cm">is_</span>(<span class="ck">True</span>))
+            .<span class="cm">order_by</span>(<span class="cf">User</span>.created_at.<span class="cm">desc</span>())
+            .<span class="cm">offset</span>(offset).<span class="cm">limit</span>(limit)
+        )
+        <span class="ck">return</span> result.<span class="cm">scalars</span>().<span class="cm">all</span>()
+
+    <span class="ck">async def</span> <span class="cf">create</span>(
+        self, db: <span class="cf">AsyncSession</span>, data: <span class="cf">UserCreate</span>
+    ) -&gt; <span class="cf">User</span>:
+        <span class="ck">if await</span> self.<span class="cm">_email_exists</span>(db, data.email):
+            <span class="ck">raise</span> <span class="cf">HTTPException</span>(<span class="cn">400</span>, <span class="cs">"Email already registered"</span>)
+        user = <span class="cf">User</span>(**data.<span class="cm">model_dump</span>())
+        db.<span class="cm">add</span>(user)
+        <span class="ck">await</span> db.<span class="cm">flush</span>()  <span class="cc"># populates user.id before commit</span>
+        <span class="ck">return</span> user
+
+    <span class="ck">async def</span> <span class="cf">update</span>(
+        self, db: <span class="cf">AsyncSession</span>,
+        user_id: int, data: <span class="cf">UserUpdate</span>,
+    ) -&gt; <span class="cf">User</span>:
+        user = <span class="ck">await</span> self.<span class="cm">get</span>(db, user_id)  <span class="cc"># raises 404 if missing</span>
+        <span class="ck">for</span> field, value <span class="ck">in</span> data.<span class="cm">model_dump</span>(exclude_unset=<span class="ck">True</span>).<span class="cm">items</span>():
+            <span class="cm">setattr</span>(user, field, value)
+        <span class="ck">await</span> db.<span class="cm">flush</span>()
+        <span class="ck">return</span> user
+
+    <span class="ck">async def</span> <span class="cf">delete</span>(
+        self, db: <span class="cf">AsyncSession</span>, user_id: int
+    ) -&gt; <span class="ck">None</span>:
+        user = <span class="ck">await</span> self.<span class="cm">get</span>(db, user_id)
+        <span class="ck">await</span> db.<span class="cm">delete</span>(user)
+        <span class="ck">await</span> db.<span class="cm">flush</span>()
+
+    <span class="ck">async def</span> <span class="cf">_email_exists</span>(
+        self, db: <span class="cf">AsyncSession</span>, email: str
+    ) -&gt; bool:
+        result = <span class="ck">await</span> db.<span class="cm">scalar</span>(
+            <span class="cm">select</span>(<span class="cf">func</span>.<span class="cm">count</span>())
+            .<span class="cm">select_from</span>(<span class="cf">User</span>)
+            .<span class="cm">where</span>(<span class="cf">User</span>.email == email)
+        )
+        <span class="ck">return</span> (result <span class="ck">or</span> <span class="cn">0</span>) &gt; <span class="cn">0</span>
+
+
+<span class="cc"># Singleton — import this instance everywhere</span>
+user_service = <span class="cf">UserService</span>()</code></pre>
+            </div>
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">routers/users.py — the thin routes</span></div>
+                <pre><code><span class="ck">from</span> fastapi <span class="ck">import</span> APIRouter, status
+<span class="ck">from</span> app.core.db <span class="ck">import</span> DBSession
+<span class="ck">from</span> app.services.user_service <span class="ck">import</span> user_service
+<span class="ck">from</span> app.schemas.user <span class="ck">import</span> (
+    UserCreate, UserUpdate, UserResponse, UserListResponse
+)
+
+router = <span class="cf">APIRouter</span>(prefix=<span class="cs">"/users"</span>, tags=[<span class="cs">"users"</span>])
+
+
+@router.<span class="cm">get</span>(<span class="cs">"/{user_id}"</span>, response_model=<span class="cf">UserResponse</span>)
+<span class="ck">async def</span> <span class="cf">get_user</span>(user_id: int, db: <span class="cf">DBSession</span>):
+    <span class="ck">return await</span> user_service.<span class="cm">get</span>(db, user_id)
+
+
+@router.<span class="cm">get</span>(<span class="cs">""</span>, response_model=<span class="cf">UserListResponse</span>)
+<span class="ck">async def</span> <span class="cf">list_users</span>(
+    db: <span class="cf">DBSession</span>,
+    page: int = <span class="cn">1</span>,
+    page_size: int = <span class="cn">20</span>,
+):
+    offset = (page - <span class="cn">1</span>) * page_size
+    items = <span class="ck">await</span> user_service.<span class="cm">list</span>(db, offset=offset, limit=page_size)
+    <span class="ck">return</span> {<span class="cs">"items"</span>: items, <span class="cs">"page"</span>: page, <span class="cs">"page_size"</span>: page_size}
+
+
+@router.<span class="cm">post</span>(<span class="cs">""</span>,
+    response_model=<span class="cf">UserResponse</span>,
+    status_code=<span class="cf">status</span>.HTTP_201_CREATED,
+)
+<span class="ck">async def</span> <span class="cf">create_user</span>(data: <span class="cf">UserCreate</span>, db: <span class="cf">DBSession</span>):
+    <span class="ck">return await</span> user_service.<span class="cm">create</span>(db, data)
+
+
+@router.<span class="cm">patch</span>(<span class="cs">"/{user_id}"</span>, response_model=<span class="cf">UserResponse</span>)
+<span class="ck">async def</span> <span class="cf">update_user</span>(
+    user_id: int, data: <span class="cf">UserUpdate</span>, db: <span class="cf">DBSession</span>
+):
+    <span class="ck">return await</span> user_service.<span class="cm">update</span>(db, user_id, data)
+
+
+@router.<span class="cm">delete</span>(<span class="cs">"/{user_id}"</span>, status_code=<span class="cn">204</span>)
+<span class="ck">async def</span> <span class="cf">delete_user</span>(user_id: int, db: <span class="cf">DBSession</span>):
+    <span class="ck">await</span> user_service.<span class="cm">delete</span>(db, user_id)</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pydantic schemas -->
+    <div class="reveal" style="margin-top:36px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">Pydantic Schemas — Request and Response Shapes</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Schemas validate incoming data and control what you expose in responses. Keep them separate from your SQLAlchemy models — they serve different purposes.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">schemas/user.py — Pydantic schemas</span></div>
+                <pre><code><span class="ck">from</span> pydantic <span class="ck">import</span> BaseModel, EmailStr, ConfigDict
+<span class="ck">from</span> datetime <span class="ck">import</span> datetime
+<span class="ck">from</span> typing <span class="ck">import</span> List, Optional
+
+
+<span class="cc"># ── Incoming request to create a user ──</span>
+<span class="ck">class</span> <span class="cf">UserCreate</span>(<span class="cf">BaseModel</span>):
+    name:     str
+    email:    <span class="cf">EmailStr</span>
+    password: str
+
+
+<span class="cc"># ── PATCH — all fields optional ──</span>
+<span class="ck">class</span> <span class="cf">UserUpdate</span>(<span class="cf">BaseModel</span>):
+    name:  Optional[str] = <span class="ck">None</span>
+    email: Optional[<span class="cf">EmailStr</span>] = <span class="ck">None</span>
+
+
+<span class="cc"># ── Single user in API response ──</span>
+<span class="ck">class</span> <span class="cf">UserResponse</span>(<span class="cf">BaseModel</span>):
+    id:         int
+    name:       str
+    email:      str
+    is_active:  bool
+    created_at: datetime
+
+    <span class="cc"># allows reading from ORM model attributes</span>
+    model_config = <span class="cf">ConfigDict</span>(from_attributes=<span class="ck">True</span>)
+
+
+<span class="cc"># ── Paginated list response ──</span>
+<span class="ck">class</span> <span class="cf">UserListResponse</span>(<span class="cf">BaseModel</span>):
+    items:     <span class="cf">List</span>[<span class="cf">UserResponse</span>]
+    page:      int
+    page_size: int
+    total:     Optional[int] = <span class="ck">None</span>  <span class="cc"># optional count</span></code></pre>
+            </div>
+            <div>
+                <div style="background:var(--dark);border-radius:12px;padding:22px 24px">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">ORM model vs Pydantic schema — what goes where</div>
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead><tr>
+                            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08)">Concern</th>
+                            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08)">ORM Model</th>
+                            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08)">Schema</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05)"><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">DB table shape</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05)"><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">Relationships</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05)"><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">Request validation</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05)"><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">API response shape</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05)"><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">Hide sensitive fields</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td></tr>
+                            <tr><td style="padding:8px 12px;font-size:11.5px;color:rgba(255,255,255,0.5)">Alembic migrations</td><td style="padding:8px 12px;font-size:11px;color:#4ade80">✅ Yes</td><td style="padding:8px 12px;font-size:11px;color:#fca5a5">❌ No</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-purple" style="margin-top:14px">
+                    <div class="callout-hl">from_attributes=True</div>
+                    <p>Add <code class="ic">model_config = ConfigDict(from_attributes=True)</code> to every response schema. Without it, <code class="ic">UserResponse.model_validate(user_orm_object)</code> fails because Pydantic can't read ORM object attributes by default.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PART 4 -->
+<div class="part-divider reveal">
+    <div class="part-num">04</div>
+    <div>
+        <div class="part-title">Pagination + Complete Project Structure</div>
+        <div class="part-desc">Paginated endpoints with total counts, and the full directory layout for a production FastAPI + SQLAlchemy project.</div>
+    </div>
+</div>
+
+<!-- SECTION 4 -->
+<section class="section" id="s4">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">04 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Paginated Endpoints — Offset/Limit with Total Count</h2>
+            <div class="sec-copy">
+                <p>Production APIs always paginate lists. The standard pattern returns both the <strong>items for the current page</strong> and the <strong>total count</strong> so the client can render page numbers. Getting both in one round-trip requires running two queries — one for the data, one for the count.</p>
+                <p>SQLAlchemy makes this efficient. Both queries hit the same table and filters, but only the data query uses <code class="ic">LIMIT</code>/<code class="ic">OFFSET</code>. The count query uses <code class="ic">func.count()</code>.</p>
+                <p>You can run both queries with <code class="ic">await asyncio.gather()</code> to fetch them in parallel — cutting latency in half on paginated endpoints.</p>
+            </div>
+            <div class="callout callout-blue">
+                <div class="callout-hl">Use query reuse for count</div>
+                <p>Build the base query once, then apply <code class="ic">.limit().offset()</code> for data and <code class="ic">func.count()</code> for the total. This keeps your filter logic in one place — if you add a new filter, both the data and the count update automatically.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">PAGINATED LIST — data + total count</span></div>
+                <pre><code><span class="ck">import</span> asyncio
+<span class="ck">from</span> sqlalchemy <span class="ck">import</span> select, func
+
+<span class="ck">class</span> <span class="cf">UserService</span>:
+    <span class="ck">async def</span> <span class="cf">list_paginated</span>(
+        self,
+        db: <span class="cf">AsyncSession</span>,
+        page: int = <span class="cn">1</span>,
+        page_size: int = <span class="cn">20</span>,
+        search: str | <span class="ck">None</span> = <span class="ck">None</span>,
+    ):
+        <span class="cc"># ── Build the base query with filters ──</span>
+        base_q = <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(<span class="cf">User</span>.is_active.<span class="cm">is_</span>(<span class="ck">True</span>))
+        <span class="ck">if</span> search:
+            base_q = base_q.<span class="cm">where</span>(<span class="cf">User</span>.name.<span class="cm">ilike</span>(<span class="cs">f"%</span>{search}<span class="cs">%"</span>))
+
+        <span class="cc"># ── Two queries from the same base ──</span>
+        offset = (page - <span class="cn">1</span>) * page_size
+        data_q  = base_q.<span class="cm">order_by</span>(<span class="cf">User</span>.created_at.<span class="cm">desc</span>())\
+                        .<span class="cm">offset</span>(offset).<span class="cm">limit</span>(page_size)
+        count_q = <span class="cm">select</span>(<span class="cf">func</span>.<span class="cm">count</span>()).<span class="cm">select_from</span>(base_q.<span class="cm">subquery</span>())
+
+        <span class="cc"># ── Run both in parallel with asyncio.gather ──</span>
+        data_result, total = <span class="ck">await</span> asyncio.<span class="cm">gather</span>(
+            db.<span class="cm">execute</span>(data_q),
+            db.<span class="cm">scalar</span>(count_q),
+        )
+        items = data_result.<span class="cm">scalars</span>().<span class="cm">all</span>()
+
+        <span class="ck">return</span> {
+            <span class="cs">"items"</span>:      items,
+            <span class="cs">"total"</span>:      total <span class="ck">or</span> <span class="cn">0</span>,
+            <span class="cs">"page"</span>:       page,
+            <span class="cs">"page_size"</span>:  page_size,
+            <span class="cs">"pages"</span>:      (total + page_size - <span class="cn">1</span>) // page_size,  <span class="cc"># ceiling div</span>
+        }
+
+
+<span class="cc"># ── The route ──</span>
+@router.<span class="cm">get</span>(<span class="cs">""</span>)
+<span class="ck">async def</span> <span class="cf">list_users</span>(
+    db: <span class="cf">DBSession</span>,
+    page: int = <span class="cn">1</span>,
+    page_size: int = <span class="cn">20</span>,
+    search: str | <span class="ck">None</span> = <span class="ck">None</span>,
+):
+    <span class="ck">return await</span> user_service.<span class="cm">list_paginated</span>(
+        db, page=page, page_size=page_size, search=search
+    )</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project structure -->
+    <div class="reveal" style="margin-top:56px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">Complete Production Project Structure</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:22px">The directory layout that scales — from 3 endpoints to 300. Every file has a single job, every folder has a single concern.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div style="background:var(--dark);border-radius:14px;padding:26px 28px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">File tree</div>
+                <pre style="font-family:'Courier New',monospace;font-size:12.5px;line-height:1.95;color:rgba(255,255,255,0.6)"><span style="color:var(--orange)">my-api/</span>
+├── <span style="color:var(--orange)">app/</span>
+│   ├── <span style="color:#60a5fa">core/</span>
+│   │   ├── <span style="color:#93c5fd">db.py</span>           <span style="color:rgba(255,255,255,0.25)"># engine, session, DBSession type</span>
+│   │   ├── <span style="color:#93c5fd">config.py</span>       <span style="color:rgba(255,255,255,0.25)"># settings from env vars</span>
+│   │   └── <span style="color:#93c5fd">security.py</span>     <span style="color:rgba(255,255,255,0.25)"># auth helpers</span>
+│   │
+│   ├── <span style="color:#c084fc">models/</span>
+│   │   ├── <span style="color:#d8b4fe">base.py</span>         <span style="color:rgba(255,255,255,0.25)"># DeclarativeBase</span>
+│   │   ├── <span style="color:#d8b4fe">mixins.py</span>       <span style="color:rgba(255,255,255,0.25)"># TimestampMixin, UUIDMixin</span>
+│   │   └── <span style="color:#d8b4fe">user.py</span>         <span style="color:rgba(255,255,255,0.25)"># User ORM model</span>
+│   │
+│   ├── <span style="color:#4ade80">schemas/</span>
+│   │   └── <span style="color:#86efac">user.py</span>         <span style="color:rgba(255,255,255,0.25)"># UserCreate, UserResponse…</span>
+│   │
+│   ├── <span style="color:var(--orange)">services/</span>
+│   │   └── <span style="color:#fcd34d">user_service.py</span> <span style="color:rgba(255,255,255,0.25)"># UserService class</span>
+│   │
+│   ├── <span style="color:#f87171">routers/</span>
+│   │   ├── <span style="color:#fca5a5">__init__.py</span>     <span style="color:rgba(255,255,255,0.25)"># collect all routers</span>
+│   │   └── <span style="color:#fca5a5">users.py</span>        <span style="color:rgba(255,255,255,0.25)"># user endpoints</span>
+│   │
+│   └── <span style="color:#94a3b8">main.py</span>             <span style="color:rgba(255,255,255,0.25)"># FastAPI app, include routers</span>
+│
+├── <span style="color:#94a3b8">alembic/</span>                <span style="color:rgba(255,255,255,0.25)"># migrations</span>
+├── <span style="color:#94a3b8">alembic.ini</span>
+├── <span style="color:#94a3b8">tests/</span>
+└── <span style="color:#94a3b8">requirements.txt</span></pre>
+            </div>
+            <div>
+                <div class="cb" style="margin:0">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">app/main.py — the FastAPI app entry point</span></div>
+                    <pre><code><span class="ck">from</span> fastapi <span class="ck">import</span> FastAPI
+<span class="ck">from</span> contextlib <span class="ck">import</span> asynccontextmanager
+<span class="ck">from</span> app.core.db <span class="ck">import</span> engine
+<span class="ck">from</span> app.models.base <span class="ck">import</span> Base
+<span class="ck">from</span> app.routers <span class="ck">import</span> users
+
+
+<span class="cc"># ── Lifespan: startup + shutdown logic ──</span>
+@<span class="cm">asynccontextmanager</span>
+<span class="ck">async def</span> <span class="cf">lifespan</span>(app: <span class="cf">FastAPI</span>):
+    <span class="cc"># startup — e.g. create tables in dev (use Alembic in prod)</span>
+    <span class="ck">async with</span> engine.<span class="cm">begin</span>() <span class="ck">as</span> conn:
+        <span class="ck">await</span> conn.<span class="cm">run_sync</span>(<span class="cf">Base</span>.metadata.<span class="cm">create_all</span>)
+    <span class="ck">yield</span>
+    <span class="cc"># shutdown — dispose the connection pool</span>
+    <span class="ck">await</span> engine.<span class="cm">dispose</span>()
+
+
+<span class="cc"># ── Create the app ──</span>
+app = <span class="cf">FastAPI</span>(
+    title=<span class="cs">"My API"</span>,
+    lifespan=lifespan,
+)
+
+<span class="cc"># ── Register routers ──</span>
+app.<span class="cm">include_router</span>(users.router, prefix=<span class="cs">"/api/v1"</span>)</code></pre>
+                </div>
+                <div class="callout callout-green" style="margin-top:14px">
+                    <div class="callout-hl">Use lifespan, not on_event</div>
+                    <p><code class="ic">@app.on_event("startup")</code> is deprecated in FastAPI. Use the <code class="ic">lifespan</code> context manager instead — it runs startup code before <code class="ic">yield</code> and shutdown code after. This is the modern pattern and handles exceptions cleanly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final cheat sheet -->
+    <div class="reveal" style="margin-top:48px">
+        <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px">FastAPI + SQLAlchemy — Production Checklist</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:22px">Everything you should have in place before shipping a FastAPI + SQLAlchemy app to production.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:11px;font-weight:800;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Database Setup</div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">pool_pre_ping=True</code> on engine</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">pool_recycle=3600</code> to refresh stale connections</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">expire_on_commit=False</code> in session factory</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">+asyncpg</code> in the database URL</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">Alembic managing all schema changes</span></div>
+                </div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:11px;font-weight:800;color:#7c3aed;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Sessions &amp; DI</div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">db_session</code> generator with <code class="ic">async with begin()</code></span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">One session per request — never share sessions</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">DBSession</code> Annotated type alias for clean signatures</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">Session passed to services, not created inside them</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">engine.dispose()</code> in lifespan shutdown</span></div>
+                </div>
+            </div>
+            <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:18px">
+                <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Routes &amp; Services</div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">Routes only parse, delegate, and return</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">Business logic lives in service functions</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)">Separate Pydantic schemas for request and response</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">from_attributes=True</code> on all response schemas</span></div>
+                    <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--green);font-size:14px;flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--dark)"><code class="ic">selectinload</code> or <code class="ic">joinedload</code> for all relationships</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course complete banner -->
+    <div class="reveal" style="margin-top:56px;background:var(--dark);border-radius:16px;padding:40px 44px;border:2px solid rgba(240,165,0,0.25);text-align:center">
+        <div style="font-size:10px;font-weight:800;color:rgba(240,165,0,0.5);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px">Course Complete</div>
+        <div style="font-size:30px;font-weight:900;color:#fff;letter-spacing:-1.5px;margin-bottom:12px">You've finished <span style="color:var(--orange)">Master SQLAlchemy</span></div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.45);max-width:580px;margin:0 auto 28px;line-height:1.75">From <strong style="color:rgba(255,255,255,0.7)">SQL foundations</strong> to <strong style="color:rgba(255,255,255,0.7)">async sessions</strong> to <strong style="color:rgba(255,255,255,0.7)">production FastAPI integration</strong> — you now have everything needed to build a real, scalable Python API.</div>
+        <a href="index.html" class="btn-home" style="margin:0 auto">
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M1.5 8L8 2l6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 7.5V14h3.5v-3.5h3V14H13V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back to Course Home
+        </a>
+    </div>
+</section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">You're done</div>
+            <div class="mf-title">All <em>11 Modules</em> complete</div>
+        </div>
+        <a href="index.html" class="btn-home">
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M1.5 8L8 2l6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 7.5V14h3.5v-3.5h3V14H13V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Course Home
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

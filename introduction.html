@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 01: Introduction — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ─────────────────────────────────── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            height: 64px; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 48px;
+            background: rgba(26,28,32,0.97); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(240,165,0,0.12);
+        }
+        .nav-back {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; color: rgba(255,255,255,0.55);
+            font-size: 13px; font-weight: 500; transition: color 0.2s;
+        }
+        .nav-back:hover { color: #fff; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-progress {
+            font-size: 12px; font-weight: 600;
+            color: rgba(255,255,255,0.35); letter-spacing: 0.5px;
+        }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next {
+            display: flex; align-items: center; gap: 8px;
+            text-decoration: none; color: rgba(255,255,255,0.55);
+            font-size: 13px; font-weight: 500; transition: color 0.2s;
+        }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ────────────────────────────────── */
+        .mod-hero {
+            min-height: 72vh; background: var(--dark);
+            display: flex; align-items: center;
+            padding: 120px 48px 80px; position: relative; overflow: hidden;
+        }
+        .mod-hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+        .hero-watermark {
+            position: absolute; right: -40px; top: 50%;
+            transform: translateY(-50%);
+            font-size: clamp(180px, 26vw, 320px);
+            font-weight: 900; color: rgba(240,165,0,0.04);
+            line-height: 1; letter-spacing: -16px;
+            user-select: none; pointer-events: none;
+        }
+        .mod-hero-inner {
+            max-width: 820px; margin: 0 auto;
+            position: relative; z-index: 1;
+            animation: fadeUp 0.8s ease both;
+        }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag {
+            font-size: 11px; font-weight: 800; color: var(--dark);
+            background: var(--orange); padding: 5px 14px;
+            border-radius: 100px; letter-spacing: 1.5px;
+        }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; letter-spacing: 1px; }
+        .mod-title {
+            font-size: clamp(42px, 7vw, 80px);
+            font-weight: 900; color: #fff; line-height: 0.96;
+            letter-spacing: -3.5px; margin-bottom: 24px;
+        }
+        .mod-desc {
+            font-size: 17px; color: rgba(255,255,255,0.48);
+            line-height: 1.75; max-width: 560px; margin-bottom: 36px;
+        }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 12px; font-weight: 500;
+            color: rgba(255,255,255,0.35);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 14px; border-radius: 100px;
+        }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── MAIN CONTENT ────────────────────────── */
+        .page-content { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+
+        .lesson {
+            padding: 96px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .lesson:last-child { border-bottom: none; }
+
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 72px;
+            align-items: center;
+        }
+        .lesson-grid.rev { direction: rtl; }
+        .lesson-grid.rev > * { direction: ltr; }
+
+        /* Section label */
+        .sec-label {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+        }
+        .sec-n {
+            font-size: 10px; font-weight: 800; color: var(--orange);
+            letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+        }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+
+        .lesson-title {
+            font-size: clamp(24px, 3vw, 36px);
+            font-weight: 800; color: var(--dark);
+            line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px;
+        }
+        .lesson-copy {
+            font-size: 15.5px; color: #454748;
+            line-height: 1.82;
+        }
+        .lesson-copy p + p { margin-top: 16px; }
+        .lesson-copy strong { color: var(--dark); font-weight: 600; }
+
+        /* Concept grid */
+        .cg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 28px; }
+        .cg-card {
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: 10px; padding: 15px 17px;
+        }
+        .cg-term {
+            font-size: 11px; font-weight: 800; color: var(--orange);
+            letter-spacing: 0.5px; margin-bottom: 5px; text-transform: uppercase;
+        }
+        .cg-def { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+
+        /* Callout */
+        .callout {
+            margin-top: 24px;
+            background: rgba(240,165,0,0.07);
+            border-left: 3px solid var(--orange);
+            border-radius: 0 9px 9px 0;
+            padding: 15px 18px;
+        }
+        .callout-hl {
+            font-size: 11px; font-weight: 800; color: var(--orange);
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+        }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+
+        /* Code block */
+        .cb {
+            background: #1a1c20; border-radius: 12px;
+            overflow: hidden; margin: 22px 0; font-size: 13px;
+        }
+        .cb-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 11px 16px;
+            background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.28); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.72; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck { color: #CF7500; }
+        .cs { color: #87c264; }
+        .cc { color: #5a5c63; font-style: italic; }
+        .cf { color: #F0A500; }
+        .cn { color: #7ec8e3; }
+        .cm { color: #d4a0f0; }
+
+        /* ── DIAGRAM: TABLES ──────────────────────── */
+        .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        .tbl-wrap { position: relative; }
+
+        .tbl-pair {
+            display: flex; align-items: flex-start; gap: 0;
+        }
+
+        .dbtbl {
+            flex: 1; border-radius: 10px; overflow: hidden;
+            border: 1.5px solid var(--border);
+            box-shadow: 0 4px 20px rgba(26,28,32,0.08);
+            background: #fff;
+            opacity: 0; transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+        }
+        .dbtbl.t1 { transform: translateX(-16px); }
+        .dbtbl.t2 { transform: translateX(16px); transition-delay: 0.22s; }
+        .reveal.in .dbtbl { opacity: 1; transform: translateX(0); }
+
+        .tbl-head {
+            background: var(--dark); padding: 11px 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .tbl-dot { width: 7px; height: 7px; background: var(--orange); border-radius: 50%; }
+        .tbl-name { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+
+        .tbl-row { display: grid; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .tbl-row:last-child { border-bottom: none; }
+        .tc { padding: 8px 12px; font-size: 12px; color: var(--dark); }
+        .tc.hd { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; background: rgba(26,28,32,0.05); }
+        .tc.pk { color: var(--orange); font-weight: 700; background: rgba(240,165,0,0.06); }
+        .tc.fk { color: var(--orange-dark); font-weight: 600; background: rgba(207,117,0,0.06); }
+
+        .tbl-arrow {
+            flex-shrink: 0; width: 64px;
+            display: flex; align-items: center; justify-content: center;
+            padding-top: 68px;
+        }
+
+        .arrow-line {
+            stroke-dasharray: 110;
+            stroke-dashoffset: 110;
+            transition: stroke-dashoffset 0.7s 0.5s var(--ease);
+        }
+        .reveal.in .arrow-line { stroke-dashoffset: 0; }
+
+        .arrow-head {
+            opacity: 0;
+            transition: opacity 0.25s 1.15s ease;
+        }
+        .reveal.in .arrow-head { opacity: 1; }
+
+        .tbl-legend {
+            display: flex; justify-content: space-between;
+            margin-top: 14px; opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.4s 1s ease, transform 0.4s 1s ease;
+        }
+        .reveal.in .tbl-legend { opacity: 1; transform: translateY(0); }
+
+        .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--muted); }
+        .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+        /* ── DIAGRAM: STACK ─────────────────────────── */
+        .stack { display: flex; flex-direction: column; gap: 6px; }
+
+        .sl {
+            border-radius: 10px; padding: 14px 18px;
+            display: flex; align-items: center; gap: 14px;
+            opacity: 0; transform: translateY(14px);
+            transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
+        }
+        .sl:nth-child(1) { transition-delay: 0s; }
+        .sl:nth-child(2) { transition-delay: 0.06s; }
+        .sl:nth-child(3) { transition-delay: 0.14s; }
+        .sl:nth-child(4) { transition-delay: 0.24s; }
+        .sl:nth-child(5) { transition-delay: 0.3s; }
+        .sl:nth-child(6) { transition-delay: 0.38s; }
+        .sl:nth-child(7) { transition-delay: 0.44s; }
+        .sl:nth-child(8) { transition-delay: 0.52s; }
+        .sl:nth-child(9) { transition-delay: 0.58s; }
+
+        .reveal.in .sl { opacity: 1; transform: translateY(0); }
+
+        .sl-icon {
+            width: 38px; height: 38px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .sl-label { font-size: 13.5px; font-weight: 700; color: var(--dark); }
+        .sl-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+        .sl-arrow { text-align: center; font-size: 16px; color: rgba(240,165,0,0.38); font-weight: 300; padding: 0; background: none !important; border: none !important; }
+
+        /* ── DIAGRAM: ARCH SVG ────────────────────────── */
+        .arch-svg { width: 100%; }
+
+        .apath {
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            transition: stroke-dashoffset 0.65s var(--ease);
+        }
+        .reveal.in .apath { stroke-dashoffset: 0; }
+
+        .abox { opacity: 0; transform: translateY(10px); transition: opacity 0.45s ease, transform 0.45s ease; }
+        .reveal.in .abox { opacity: 1; transform: translateY(0); }
+
+        /* ── MODULE FOOTER ─────────────────────────────── */
+        .mod-foot {
+            background: var(--dark); padding: 72px 48px;
+        }
+        .mod-foot-inner {
+            max-width: 1140px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: var(--orange); color: var(--dark);
+            font-family: var(--font); font-size: 14px; font-weight: 700;
+            padding: 15px 30px; border-radius: 10px; text-decoration: none;
+            transition: background 0.25s ease, transform 0.25s ease;
+        }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        /* ── KEYFRAMES ─────────────────────────────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── RESPONSIVE ─────────────────────────────────── */
+        @media (max-width: 860px) {
+            nav { padding: 0 24px; }
+            .mod-hero { padding: 100px 24px 60px; }
+            .page-content { padding: 0 24px; }
+            .lesson-grid { grid-template-columns: 1fr; gap: 48px; }
+            .lesson-grid.rev { direction: ltr; }
+            .mod-foot { padding: 60px 24px; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 520px) {
+            .cg { grid-template-columns: 1fr; }
+            .tbl-arrow { display: none; }
+            .tbl-pair { flex-direction: column; gap: 16px; }
+            .nav-next { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        All Modules
+    </a>
+    <div class="nav-mid"><a href="index.html" class="nav-home"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Home</a><span class="nav-sep">|</span><span class="nav-progress">Module <strong>01</strong></span></div>
+    <a href="core-vs-orm.html" class="nav-next">
+        Core vs ORM
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </a>
+</nav>
+
+<!-- ── HERO ────────────────────────────────────────── -->
+<header class="mod-hero">
+    <div class="hero-watermark">01</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 01</span>
+        </div>
+        <h1 class="mod-title">Introduction</h1>
+        <p class="mod-desc">
+            Before writing a single line of SQLAlchemy, let's build the mental model — what relational databases are, why ORMs exist, and what makes SQLAlchemy the go-to database toolkit in Python.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Beginner Friendly</div>
+            <div class="chip"><div class="chip-dot"></div>3 Core Concepts</div>
+            <div class="chip"><div class="chip-dot"></div>Visual Diagrams</div>
+        </div>
+    </div>
+</header>
+
+<!-- ── CONTENT ──────────────────────────────────────── -->
+<main class="page-content">
+
+    <!-- ─── SECTION 1: RELATIONAL DATABASES ─────────── -->
+    <section class="lesson" id="s1">
+        <div class="lesson-grid">
+
+            <!-- Text Left -->
+            <div class="reveal">
+                <div class="sec-label">
+                    <span class="sec-n">01 / 03</span>
+                    <div class="sec-rule"></div>
+                </div>
+                <h2 class="lesson-title">What is a Relational Database?</h2>
+                <div class="lesson-copy">
+                    <p>
+                        Think of a database as a well-organized filing cabinet for all your app's data. A <strong>relational database</strong> organizes data into <strong>tables</strong> — and the special part is that these tables can be <strong>connected to each other</strong>. That's the "relational" in the name.
+                    </p>
+                    <p>
+                        Each table stores one type of thing. A <em>users</em> table holds all your users. An <em>orders</em> table holds all your orders. When an order needs to know <em>who</em> placed it, it stores the user's ID — creating a link between the two tables.
+                    </p>
+                </div>
+
+                <div class="cg">
+                    <div class="cg-card">
+                        <div class="cg-term">Table</div>
+                        <div class="cg-def">A grid of rows and columns — like a spreadsheet for one type of data.</div>
+                    </div>
+                    <div class="cg-card">
+                        <div class="cg-term">Row (Record)</div>
+                        <div class="cg-def">One single entry in a table — one user, one order, one product.</div>
+                    </div>
+                    <div class="cg-card" style="border-color:rgba(240,165,0,0.5);background:rgba(240,165,0,0.04)">
+                        <div class="cg-term">Primary Key</div>
+                        <div class="cg-def">A unique ID for each row. No two rows can share the same primary key.</div>
+                    </div>
+                    <div class="cg-card" style="border-color:rgba(207,117,0,0.4);background:rgba(207,117,0,0.04)">
+                        <div class="cg-term">Foreign Key</div>
+                        <div class="cg-def">A column that points to a primary key in another table — this creates the relationship.</div>
+                    </div>
+                </div>
+
+                <div class="callout">
+                    <div class="callout-hl">Why This Matters</div>
+                    <p>Instead of copying Alice's name into every order row, you store her <strong>user_id = 1</strong>. One change to her name updates everywhere automatically. No duplication, no inconsistency.</p>
+                </div>
+            </div>
+
+            <!-- Diagram Right: Two tables with FK arrow -->
+            <div class="reveal tbl-wrap" id="diag1">
+                <div class="tbl-pair">
+                    <!-- USERS TABLE -->
+                    <div class="dbtbl t1">
+                        <div class="tbl-head"><div class="tbl-dot"></div><span class="tbl-name">users</span></div>
+                        <div class="tbl-row" style="grid-template-columns:40px 1fr 1fr">
+                            <div class="tc hd">id</div><div class="tc hd">name</div><div class="tc hd">email</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:40px 1fr 1fr;background:#fffbf0">
+                            <div class="tc pk">1</div><div class="tc">Alice</div><div class="tc" style="color:var(--muted)">a@…</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:40px 1fr 1fr">
+                            <div class="tc pk">2</div><div class="tc">Bob</div><div class="tc" style="color:var(--muted)">b@…</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:40px 1fr 1fr;background:#f9f9f9">
+                            <div class="tc pk">3</div><div class="tc">Carol</div><div class="tc" style="color:var(--muted)">c@…</div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow between tables -->
+                    <div class="tbl-arrow">
+                        <svg width="64" height="32" overflow="visible" viewBox="0 0 64 32">
+                            <defs>
+                                <marker id="arr" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 8 3.5, 0 7" fill="#F0A500" class="arrow-head"/>
+                                </marker>
+                            </defs>
+                            <line x1="0" y1="16" x2="56" y2="16"
+                                stroke="#F0A500" stroke-width="2"
+                                stroke-dasharray="6 4"
+                                marker-end="url(#arr)"
+                                class="arrow-line"/>
+                        </svg>
+                    </div>
+
+                    <!-- ORDERS TABLE -->
+                    <div class="dbtbl t2">
+                        <div class="tbl-head"><div class="tbl-dot"></div><span class="tbl-name">orders</span></div>
+                        <div class="tbl-row" style="grid-template-columns:36px 52px 1fr">
+                            <div class="tc hd">id</div><div class="tc hd">user_id</div><div class="tc hd">total</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:36px 52px 1fr">
+                            <div class="tc pk">1</div><div class="tc fk">1</div><div class="tc">$999</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:36px 52px 1fr;background:#f9f9f9">
+                            <div class="tc pk">2</div><div class="tc fk">1</div><div class="tc">$29</div>
+                        </div>
+                        <div class="tbl-row" style="grid-template-columns:36px 52px 1fr">
+                            <div class="tc pk">3</div><div class="tc fk">2</div><div class="tc">$89</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tbl-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--orange)"></div>
+                        Primary Key — unique ID per row
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--orange-dark)"></div>
+                        Foreign Key — links to users.id
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── SECTION 2: WHY ORM? ──────────────────────── -->
+    <section class="lesson" id="s2">
+        <div class="lesson-grid rev">
+
+            <!-- Stack Diagram Left -->
+            <div class="reveal" id="diag2">
+                <div class="stack">
+                    <div class="sl" style="background:#fff;border:1.5px solid var(--border)">
+                        <div class="sl-icon" style="background:rgba(240,165,0,0.1)">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                                <rect x="3" y="4" width="14" height="9" rx="2" stroke="#F0A500" stroke-width="1.5"/>
+                                <path d="M7 17h6M10 13v4" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div><div class="sl-label">Your Python App</div><div class="sl-sub">Write Python — forget SQL exists</div></div>
+                    </div>
+
+                    <div class="sl sl-arrow">↓</div>
+
+                    <div class="sl" style="background:var(--dark);border:1.5px solid var(--orange)">
+                        <div class="sl-icon" style="background:rgba(240,165,0,0.15)">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                                <circle cx="10" cy="10" r="7" stroke="#F0A500" stroke-width="1.5"/>
+                                <path d="M7 10l2 2 4-4" stroke="#F0A500" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="sl-label" style="color:#fff">SQLAlchemy ORM</div>
+                            <div class="sl-sub" style="color:rgba(255,255,255,0.4)">Translates Python ↔ SQL automatically</div>
+                        </div>
+                    </div>
+
+                    <div class="sl sl-arrow">↓</div>
+
+                    <div class="sl" style="background:#fff;border:1.5px solid var(--border)">
+                        <div class="sl-icon" style="background:rgba(26,28,32,0.06)">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                                <path d="M3 5h14M3 10h14M3 15h9" stroke="#1A1C20" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div><div class="sl-label">SQL Queries</div><div class="sl-sub">Generated for you — never hand-written</div></div>
+                    </div>
+
+                    <div class="sl sl-arrow">↓</div>
+
+                    <div class="sl" style="background:#fff;border:1.5px solid var(--border)">
+                        <div class="sl-icon" style="background:rgba(26,28,32,0.06)">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                                <path d="M4 8l6-5 6 5v8l-6 4-6-4V8z" stroke="#1A1C20" stroke-width="1.5" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div><div class="sl-label">DBAPI Driver</div><div class="sl-sub">psycopg2, asyncpg, sqlite3…</div></div>
+                    </div>
+
+                    <div class="sl sl-arrow">↓</div>
+
+                    <div class="sl" style="background:var(--dark);border:1.5px solid rgba(255,255,255,0.08)">
+                        <div class="sl-icon" style="background:rgba(240,165,0,0.12)">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                                <ellipse cx="10" cy="6" rx="6" ry="2.5" stroke="#F0A500" stroke-width="1.5"/>
+                                <path d="M4 6v8c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V6" stroke="#F0A500" stroke-width="1.5"/>
+                                <path d="M4 10c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5" stroke="#F0A500" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="sl-label" style="color:#fff">Database</div>
+                            <div class="sl-sub" style="color:rgba(255,255,255,0.38)">PostgreSQL · MySQL · SQLite</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Right -->
+            <div class="reveal">
+                <div class="sec-label">
+                    <span class="sec-n">02 / 03</span>
+                    <div class="sec-rule"></div>
+                </div>
+                <h2 class="lesson-title">Why Do We Need an ORM?</h2>
+                <div class="lesson-copy">
+                    <p>Without an ORM, you write raw SQL strings directly in your Python code. It works — but look at the pain:</p>
+                </div>
+
+                <div class="cb">
+                    <div class="cb-head">
+                        <div class="cb-dots"><span></span><span></span><span></span></div>
+                        <span class="cb-lang">WITHOUT ORM — MESSY</span>
+                    </div>
+                    <pre><code><span class="cc"># SQL mixed into Python strings</span>
+cursor.execute(<span class="cs">"""
+    INSERT INTO users (name, email)
+    VALUES (%s, %s)
+"""</span>, (<span class="cs">"Alice"</span>, <span class="cs">"alice@example.com"</span>))
+
+rows = cursor.fetchall()
+<span class="cc"># manually map DB rows to Python dicts</span>
+users = [{<span class="cs">"id"</span>: r[<span class="cn">0</span>], <span class="cs">"name"</span>: r[<span class="cn">1</span>]} <span class="ck">for</span> r <span class="ck">in</span> rows]</code></pre>
+                </div>
+
+                <div class="lesson-copy">
+                    <p>With <strong>SQLAlchemy ORM</strong>, you work with Python objects. No SQL strings, no manual row mapping:</p>
+                </div>
+
+                <div class="cb">
+                    <div class="cb-head">
+                        <div class="cb-dots"><span></span><span></span><span></span></div>
+                        <span class="cb-lang">WITH SQLALCHEMY ORM — CLEAN</span>
+                    </div>
+                    <pre><code><span class="cc"># Pure Python — SQLAlchemy handles SQL</span>
+user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>, email=<span class="cs">"alice@example.com"</span>)
+session.<span class="cm">add</span>(user)
+session.<span class="cm">commit</span>()
+
+<span class="cc"># Query reads like English</span>
+users = session.<span class="cm">query</span>(<span class="cf">User</span>).<span class="cm">filter</span>(
+    User.name == <span class="cs">"Alice"</span>
+).<span class="cm">all</span>()</code></pre>
+                </div>
+
+                <div class="callout">
+                    <div class="callout-hl">The ORM Advantage</div>
+                    <p>Your Python <strong>classes become database tables</strong>. Rename a column in the class and it renames everywhere — no hunting through SQL strings. No typos, no manual mapping, no mixed concerns.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── SECTION 3: SQLALCHEMY ─────────────────────── -->
+    <section class="lesson" id="s3">
+        <div class="lesson-grid">
+
+            <!-- Text Left -->
+            <div class="reveal">
+                <div class="sec-label">
+                    <span class="sec-n">03 / 03</span>
+                    <div class="sec-rule"></div>
+                </div>
+                <h2 class="lesson-title">Meet SQLAlchemy</h2>
+                <div class="lesson-copy">
+                    <p>
+                        <strong>SQLAlchemy</strong> is Python's most powerful and widely-used database library — created in 2005 and still the gold standard today. It's not just an ORM; it's a <strong>complete database toolkit</strong> with two layers.
+                    </p>
+                    <p>
+                        You can choose how much SQL control you want. Use <strong>Core</strong> when you need raw power. Use the <strong>ORM</strong> when you want to stay in pure Python. Most real-world apps use both.
+                    </p>
+                </div>
+
+                <div class="cg">
+                    <div class="cg-card" style="border-color:rgba(240,165,0,0.5);background:rgba(240,165,0,0.04)">
+                        <div class="cg-term">SQLAlchemy Core</div>
+                        <div class="cg-def">Low-level SQL toolkit. Build queries as Python expressions. Full control.</div>
+                    </div>
+                    <div class="cg-card">
+                        <div class="cg-term">SQLAlchemy ORM</div>
+                        <div class="cg-def">High-level layer. Maps Python classes to DB tables. Ideal for apps.</div>
+                    </div>
+                    <div class="cg-card">
+                        <div class="cg-term">Multi-Database</div>
+                        <div class="cg-def">PostgreSQL, MySQL, SQLite, Oracle, SQL Server — same code, any DB.</div>
+                    </div>
+                    <div class="cg-card">
+                        <div class="cg-term">Battle-Tested</div>
+                        <div class="cg-def">Used at Reddit, Yelp, Survey Monkey, and thousands of Python projects.</div>
+                    </div>
+                </div>
+
+                <div class="cb">
+                    <div class="cb-head">
+                        <div class="cb-dots"><span></span><span></span><span></span></div>
+                        <span class="cb-lang">SQLALCHEMY 2.0 — QUICK LOOK</span>
+                    </div>
+                    <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> create_engine, String, Integer
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> DeclarativeBase, Mapped, mapped_column, Session
+
+<span class="ck">class</span> <span class="cf">Base</span>(DeclarativeBase): <span class="ck">pass</span>
+
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id:    <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(<span class="cf">Integer</span>, primary_key=<span class="ck">True</span>)
+    name:  <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">100</span>))
+    email: <span class="cf">Mapped</span>[str] = <span class="cm">mapped_column</span>(<span class="cf">String</span>(<span class="cn">200</span>))
+
+engine = <span class="cm">create_engine</span>(<span class="cs">"sqlite:///myapp.db"</span>)
+<span class="cf">Base</span>.metadata.<span class="cm">create_all</span>(engine)
+
+<span class="ck">with</span> <span class="cf">Session</span>(engine) <span class="ck">as</span> session:
+    user = <span class="cf">User</span>(name=<span class="cs">"Alice"</span>, email=<span class="cs">"alice@example.com"</span>)
+    session.<span class="cm">add</span>(user)
+    session.<span class="cm">commit</span>()</code></pre>
+                </div>
+            </div>
+
+            <!-- Architecture Diagram Right -->
+            <div class="reveal" id="diag3">
+                <svg class="arch-svg" viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                    <!-- Your App -->
+                    <g class="abox" style="transition-delay:0s">
+                        <rect x="100" y="16" width="200" height="52" rx="10" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="200" y="40" text-anchor="middle" fill="#1A1C20" font-size="13" font-weight="700" font-family="Poppins,sans-serif">Your Python App</text>
+                        <text x="200" y="57" text-anchor="middle" fill="#6b6e75" font-size="10.5" font-family="Poppins,sans-serif">models · queries · logic</text>
+                    </g>
+
+                    <!-- Split lines to ORM and Core -->
+                    <path d="M 170 68 Q 100 100 100 116" stroke="#e2e2e2" stroke-width="1.5" class="apath" style="transition-delay:0.1s"/>
+                    <path d="M 230 68 Q 300 100 300 116" stroke="#e2e2e2" stroke-width="1.5" class="apath" style="transition-delay:0.1s"/>
+
+                    <!-- ORM box -->
+                    <g class="abox" style="transition-delay:0.2s">
+                        <rect x="16" y="116" width="168" height="52" rx="10" fill="#1A1C20" stroke="#F0A500" stroke-width="1.5"/>
+                        <text x="100" y="140" text-anchor="middle" fill="#F0A500" font-size="12" font-weight="800" font-family="Poppins,sans-serif">ORM Layer</text>
+                        <text x="100" y="156" text-anchor="middle" fill="rgba(255,255,255,0.42)" font-size="10" font-family="Poppins,sans-serif">Session · Models · Relationships</text>
+                    </g>
+
+                    <!-- Core box -->
+                    <g class="abox" style="transition-delay:0.28s">
+                        <rect x="216" y="116" width="168" height="52" rx="10" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="300" y="140" text-anchor="middle" fill="#1A1C20" font-size="12" font-weight="800" font-family="Poppins,sans-serif">Core Layer</text>
+                        <text x="300" y="156" text-anchor="middle" fill="#6b6e75" font-size="10" font-family="Poppins,sans-serif">Engine · SQL Expressions</text>
+                    </g>
+
+                    <!-- Lines converging to Engine -->
+                    <path d="M 100 168 Q 100 224 160 240" stroke="#e2e2e2" stroke-width="1.5" class="apath" style="transition-delay:0.38s"/>
+                    <path d="M 300 168 Q 300 224 240 240" stroke="#e2e2e2" stroke-width="1.5" class="apath" style="transition-delay:0.38s"/>
+
+                    <!-- Engine / Pool -->
+                    <g class="abox" style="transition-delay:0.5s">
+                        <rect x="80" y="240" width="240" height="52" rx="10" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="200" y="264" text-anchor="middle" fill="#1A1C20" font-size="12" font-weight="700" font-family="Poppins,sans-serif">Engine + Connection Pool</text>
+                        <text x="200" y="280" text-anchor="middle" fill="#6b6e75" font-size="10" font-family="Poppins,sans-serif">manages DB connections efficiently</text>
+                    </g>
+
+                    <!-- Down to DBAPI -->
+                    <line x1="200" y1="292" x2="200" y2="316" stroke="#e2e2e2" stroke-width="1.5" class="apath" style="transition-delay:0.6s"/>
+
+                    <!-- DBAPI -->
+                    <g class="abox" style="transition-delay:0.7s">
+                        <rect x="80" y="316" width="240" height="52" rx="10" fill="#fff" stroke="#e2e2e2" stroke-width="1.5"/>
+                        <text x="200" y="340" text-anchor="middle" fill="#1A1C20" font-size="12" font-weight="700" font-family="Poppins,sans-serif">DBAPI Driver</text>
+                        <text x="200" y="356" text-anchor="middle" fill="#6b6e75" font-size="10" font-family="Poppins,sans-serif">psycopg2 · asyncpg · sqlite3</text>
+                    </g>
+
+                    <!-- Down to DB -->
+                    <line x1="200" y1="368" x2="200" y2="392" stroke="rgba(240,165,0,0.45)" stroke-width="1.5" class="apath" style="transition-delay:0.8s"/>
+
+                    <!-- Database -->
+                    <g class="abox" style="transition-delay:0.9s">
+                        <rect x="60" y="392" width="280" height="60" rx="10" fill="#1A1C20" stroke="rgba(240,165,0,0.45)" stroke-width="1.5"/>
+                        <text x="200" y="418" text-anchor="middle" fill="#F0A500" font-size="13" font-weight="800" font-family="Poppins,sans-serif">Database</text>
+                        <text x="200" y="438" text-anchor="middle" fill="rgba(255,255,255,0.38)" font-size="10" font-family="Poppins,sans-serif">PostgreSQL · MySQL · SQLite · Oracle</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ── MODULE FOOTER ────────────────────────────────── -->
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <p class="mf-label">Up Next — Module 02</p>
+            <p class="mf-title">Core vs <em>ORM</em></p>
+        </div>
+        <a href="core-vs-orm.html" class="btn-next">
+            Continue Learning
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.classList.add('in');
+                io.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Async SQLAlchemy — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+
+        /* HERO */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -40px; top: 50%; transform: translateY(-50%); font-size: clamp(100px,17vw,220px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -8px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-title { font-size: clamp(36px,5.5vw,68px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* LAYOUT */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px,3vw,38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* CALLOUTS */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #14532d; }
+        .callout-blue { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl { color: #1d4ed8; }
+        .callout-red { background: rgba(239,68,68,0.07); border-left-color: var(--red); }
+        .callout-red .callout-hl { color: #7f1d1d; }
+        .callout-purple { background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl { color: #581c87; }
+
+        /* CODE */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck{color:#CF7500} .cs{color:#87c264} .cc{color:#6b7280;font-style:italic}
+        .cf{color:#F0A500} .cn{color:#7ec8e3} .cm{color:#c084fc}
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* REVEAL */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* PART DIVIDER */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc  { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* DARK BOX */
+        .dark-box { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; }
+        .dark-box-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 22px; }
+        .diag-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+        .diag-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+        /* TIMELINE BARS */
+        .timeline { display: flex; flex-direction: column; gap: 10px; }
+        .tl-row { display: flex; align-items: center; gap: 10px; }
+        .tl-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); width: 90px; flex-shrink: 0; text-align: right; }
+        .tl-track { flex: 1; height: 28px; background: rgba(255,255,255,0.04); border-radius: 5px; position: relative; overflow: hidden; }
+        .tl-bar { height: 100%; border-radius: 5px; display: flex; align-items: center; padding-left: 10px; font-size: 10px; font-weight: 700; white-space: nowrap; position: absolute; top: 0; }
+        .tl-wait { background: rgba(239,68,68,0.3); border: 1px solid rgba(239,68,68,0.5); color: #fca5a5; }
+        .tl-work { background: rgba(34,197,94,0.3); border: 1px solid rgba(34,197,94,0.5); color: #4ade80; }
+        .tl-idle { background: rgba(255,255,255,0.06); border: 1px dashed rgba(255,255,255,0.15); color: rgba(255,255,255,0.3); }
+
+        /* METHOD TABLE */
+        .method-table { width: 100%; border-collapse: collapse; }
+        .method-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .method-table td { padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+        .method-table tr:last-child td { border-bottom: none; }
+        .mt-method { font-family: 'Courier New', monospace; font-size: 12px; color: var(--orange); }
+        .mt-returns { font-size: 11px; color: rgba(255,255,255,0.4); font-family: 'Courier New', monospace; }
+        .mt-desc { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+        /* COMPARE CARDS */
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .cmp-card { border-radius: 10px; padding: 18px; }
+        .cmp-sync { background: rgba(107,114,128,0.1); border: 1.5px solid rgba(107,114,128,0.25); }
+        .cmp-async { background: rgba(240,165,0,0.1); border: 1.5px solid rgba(240,165,0,0.3); }
+        .cmp-label { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+        .cmp-sync  .cmp-label { color: #9ca3af; }
+        .cmp-async .cmp-label { color: var(--orange); }
+
+        /* GOTCHA CARDS */
+        .gotcha-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 28px; }
+        .gotcha-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .gc-head { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .gc-icon { font-size: 20px; margin-bottom: 6px; }
+        .gc-title { font-size: 13px; font-weight: 700; color: var(--dark); }
+        .gc-body { padding: 14px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+        /* MOD FOOTER */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col, .compare-grid, .gotcha-grid { grid-template-columns: 1fr; gap: 28px; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 580px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="alembic-migrations.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Alembic Migrations
+    </a>
+    <div class="nav-mid">
+        <a href="index.html" class="nav-home">
+            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Home
+        </a>
+        <span class="nav-sep">|</span>
+        <span class="nav-progress">Module <strong>10</strong></span>
+    </div>
+    <a href="fastapi-integration.html" class="nav-next">
+        FastAPI Integration
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">ASYNC</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 10</span>
+        </div>
+        <h1 class="mod-title">Async<em>SQLAlchemy</em></h1>
+        <p class="mod-desc">
+            Modern Python apps handle thousands of requests at once using <strong style="color:rgba(255,255,255,0.75)">asyncio</strong>. Async SQLAlchemy lets your database queries participate in that model — so your app never blocks waiting for the database. This module teaches the full async stack from engine to session to query.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>Why async?</div>
+            <div class="chip"><div class="chip-dot"></div>create_async_engine</div>
+            <div class="chip"><div class="chip-dot"></div>AsyncSession</div>
+            <div class="chip"><div class="chip-dot"></div>async_sessionmaker</div>
+            <div class="chip"><div class="chip-dot"></div>expire_on_commit</div>
+            <div class="chip"><div class="chip-dot"></div>Async relationships</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<!-- PART 1 -->
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">Why Async? The Problem Sync SQLAlchemy Has</div>
+        <div class="part-desc">Understanding what "blocking" means — and why it matters under load.</div>
+    </div>
+</div>
+
+<!-- SECTION 1 -->
+<section class="section" id="s1">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Sync Blocks. Async Waits Efficiently.</h2>
+            <div class="sec-copy">
+                <p>A regular (synchronous) database call <strong>blocks</strong>. When your code says <code class="ic">session.execute(query)</code>, the entire Python thread stops and waits — doing nothing — until the database replies. On a slow query that takes 200ms, your server can't handle any other request on that thread during those 200ms.</p>
+                <p>Async works differently. When you <code class="ic">await session.execute(query)</code>, Python says "okay, go fetch that — I'll do other work while you're gone." The server can handle dozens of other requests while waiting for the database reply.</p>
+                <p>For apps that serve many concurrent users, this is the difference between needing 100 server threads and needing 4.</p>
+            </div>
+            <div class="callout callout-blue">
+                <div class="callout-hl">The restaurant analogy</div>
+                <p>Sync is a waiter who takes one order, stands at the kitchen window waiting for the food, then brings it out — then takes the next order. Async is a waiter who takes 10 orders, submits them all, and delivers each plate as it comes out. Same kitchen — 10× the throughput.</p>
+            </div>
+        </div>
+
+        <!-- Timeline diagram -->
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:24px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">Same server — same DB queries — different concurrency model</div>
+
+                <div style="font-size:11px;font-weight:800;color:#fca5a5;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">❌ Sync — 3 requests, 1 thread, sequential</div>
+                <div class="timeline" style="margin-bottom:22px">
+                    <div class="tl-row">
+                        <div class="tl-label">Request A</div>
+                        <div class="tl-track">
+                            <div class="tl-bar tl-work"  style="left:0;width:15%">work</div>
+                            <div class="tl-bar tl-wait"  style="left:15%;width:35%">⏳ waiting for DB</div>
+                            <div class="tl-bar tl-work"  style="left:50%;width:10%">done</div>
+                            <div class="tl-bar tl-idle"  style="left:60%;width:40%">—</div>
+                        </div>
+                    </div>
+                    <div class="tl-row">
+                        <div class="tl-label">Request B</div>
+                        <div class="tl-track">
+                            <div class="tl-bar tl-idle"  style="left:0;width:60%">blocked, waiting for thread</div>
+                            <div class="tl-bar tl-work"  style="left:60%;width:10%">work</div>
+                            <div class="tl-bar tl-wait"  style="left:70%;width:20%">⏳ DB</div>
+                            <div class="tl-bar tl-idle"  style="left:90%;width:10%"></div>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:#fca5a5;margin-top:6px">Total time: long — requests queue up behind each other</div>
+                </div>
+
+                <div style="font-size:11px;font-weight:800;color:#4ade80;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">✅ Async — 3 requests, 1 thread, concurrent</div>
+                <div class="timeline">
+                    <div class="tl-row">
+                        <div class="tl-label">Request A</div>
+                        <div class="tl-track">
+                            <div class="tl-bar tl-work" style="left:0;width:10%">work</div>
+                            <div class="tl-bar" style="left:10%;width:35%;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);color:#93c5fd">await DB (yields)</div>
+                            <div class="tl-bar tl-work" style="left:45%;width:10%">done</div>
+                        </div>
+                    </div>
+                    <div class="tl-row">
+                        <div class="tl-label">Request B</div>
+                        <div class="tl-track">
+                            <div class="tl-bar tl-work" style="left:10%;width:10%">work</div>
+                            <div class="tl-bar" style="left:20%;width:30%;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);color:#93c5fd">await DB (yields)</div>
+                            <div class="tl-bar tl-work" style="left:50%;width:10%">done</div>
+                        </div>
+                    </div>
+                    <div class="tl-row">
+                        <div class="tl-label">Request C</div>
+                        <div class="tl-track">
+                            <div class="tl-bar tl-work" style="left:20%;width:10%">work</div>
+                            <div class="tl-bar" style="left:30%;width:25%;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);color:#93c5fd">await DB (yields)</div>
+                            <div class="tl-bar tl-work" style="left:55%;width:8%">done</div>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:#4ade80;margin-top:6px">Total time: short — all three overlap. Same thread, no blocking.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync vs async at a glance -->
+    <div class="reveal" style="margin-top:48px">
+        <div class="diag-title">Sync SQLAlchemy vs Async SQLAlchemy — Side by Side</div>
+        <div class="diag-sub">Every async class and function maps directly to a sync equivalent. If you know the sync API, you already know the async one — just add <code class="ic">async/await</code> and swap the class names.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">What you need</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Sync (old)</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Async (modern)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Create the engine</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">create_engine(url)</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">create_async_engine(url)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Session factory</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">sessionmaker(engine)</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">async_sessionmaker(engine)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Session type</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">Session</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">AsyncSession</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Open a session</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">with Session() as s:</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">async with Session() as s:</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Execute a query</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">session.execute(stmt)</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">await session.execute(stmt)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">Commit</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">session.commit()</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">await session.commit()</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">DB driver (PostgreSQL)</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">psycopg2</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">asyncpg</td>
+                    </tr>
+                    <tr style="background:#fafafa">
+                        <td style="padding:11px 20px;font-size:13px;font-weight:600;color:var(--dark)">URL scheme</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">postgresql://...</td>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">postgresql+asyncpg://...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- PART 2 -->
+<div class="part-divider reveal">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">Setting Up the Async Engine and Session</div>
+        <div class="part-desc">Installation, engine configuration, session factory, and the critical <code style="font-family:monospace;font-size:13px;color:var(--orange)">expire_on_commit=False</code> setting.</div>
+    </div>
+</div>
+
+<!-- SECTION 2 -->
+<section class="section" id="s2">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">02 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">The Three Pieces: Engine, Session Factory, Session</h2>
+            <div class="sec-copy">
+                <p>Setting up async SQLAlchemy requires three things, each built on top of the previous one. <strong>The engine</strong> manages the connection pool to the database. <strong>The session factory</strong> is a reusable template for creating sessions. <strong>The session</strong> is the object your code uses for every query.</p>
+                <p>You create the engine and session factory <strong>once at startup</strong>, then create a new session for each request (or unit of work). Sessions are cheap and short-lived — engines are expensive and long-lived.</p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">Install the async driver first</div>
+                <p>Async SQLAlchemy requires an async database driver. For PostgreSQL use <code class="ic">asyncpg</code>. For MySQL use <code class="ic">aiomysql</code>. For SQLite use <code class="ic">aiosqlite</code>. Without this, <code class="ic">create_async_engine</code> will fail.</p>
+            </div>
+            <div class="callout callout-green" style="margin-top:14px">
+                <div class="callout-hl">expire_on_commit=False is essential</div>
+                <p>By default, SQLAlchemy expires all object attributes after a commit — it assumes you'll immediately reload them in the same sync context. In async, attributes are loaded lazily, so accessing an expired attribute outside the session causes a <code class="ic">MissingGreenlet</code> error. Setting <code class="ic">expire_on_commit=False</code> disables this and keeps values accessible after commit.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">INSTALLATION + FULL SETUP — database.py</span></div>
+                <pre><code><span class="cc"># pip install sqlalchemy asyncpg</span>
+
+<span class="ck">from</span> sqlalchemy.ext.asyncio <span class="ck">import</span> (
+    create_async_engine,   <span class="cc"># async engine</span>
+    async_sessionmaker,    <span class="cc"># async session factory</span>
+    AsyncSession,          <span class="cc"># async session type hint</span>
+)
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> DeclarativeBase
+
+<span class="cc"># ── Step 1: Database URL — note +asyncpg ──</span>
+DATABASE_URL = (
+    <span class="cs">"postgresql+asyncpg://"</span>
+    <span class="cs">"user:password@localhost:5432/mydb"</span>
+)
+
+<span class="cc"># ── Step 2: Create the async engine (once, at startup) ──</span>
+engine = <span class="cf">create_async_engine</span>(
+    DATABASE_URL,
+    pool_pre_ping=<span class="ck">True</span>,   <span class="cc"># test connections before use</span>
+    pool_recycle=<span class="cn">3600</span>,    <span class="cc"># refresh connections hourly</span>
+    pool_size=<span class="cn">10</span>,          <span class="cc"># max permanent connections</span>
+    max_overflow=<span class="cn">20</span>,       <span class="cc"># extra burst connections</span>
+    echo=<span class="ck">False</span>,            <span class="cc"># set True to log all SQL</span>
+)
+
+<span class="cc"># ── Step 3: Session factory (once, at startup) ──</span>
+AsyncSessionLocal = <span class="cf">async_sessionmaker</span>(
+    engine,
+    expire_on_commit=<span class="ck">False</span>,  <span class="cc"># CRITICAL for async — see callout</span>
+    class_=<span class="cf">AsyncSession</span>,
+)
+
+<span class="cc"># ── Step 4: Declarative base for your models ──</span>
+<span class="ck">class</span> <span class="cf">Base</span>(<span class="cf">DeclarativeBase</span>): <span class="ck">pass</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- expire_on_commit visual -->
+    <div class="reveal" style="margin-top:48px">
+        <div class="diag-title">Why <code class="ic">expire_on_commit=False</code> Matters — Visualised</div>
+        <div class="diag-sub">The difference between the default behaviour and the async-safe setting. Without it, accessing any attribute after a commit raises an error in async code.</div>
+        <div style="background:var(--dark);border-radius:14px;padding:28px 32px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                <div>
+                    <div style="font-size:11px;font-weight:800;color:#fca5a5;margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px">❌ expire_on_commit=True (default)</div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#60a5fa;flex-shrink:0">1</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6"><code style="font-family:'Courier New',monospace;font-size:11px;color:#93c5fd">user = await session.get(User, id)</code><br>user.name = "Alice" ✅</div>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#60a5fa;flex-shrink:0">2</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6)"><code style="font-family:'Courier New',monospace;font-size:11px;color:#93c5fd">await session.commit()</code><br>→ SQLAlchemy <strong style="color:#fca5a5">expires</strong> all attributes</div>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fca5a5;flex-shrink:0">3</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6)"><code style="font-family:'Courier New',monospace;font-size:11px;color:#fca5a5">return user.name</code><br>→ tries to lazy-reload → <strong style="color:#ef4444">MissingGreenlet error!</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:800;color:#4ade80;margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px">✅ expire_on_commit=False (async safe)</div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#4ade80;flex-shrink:0">1</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6)"><code style="font-family:'Courier New',monospace;font-size:11px;color:#93c5fd">user = await session.get(User, id)</code><br>user.name = "Alice" ✅</div>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#4ade80;flex-shrink:0">2</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6)"><code style="font-family:'Courier New',monospace;font-size:11px;color:#93c5fd">await session.commit()</code><br>→ attributes <strong style="color:#4ade80">stay in memory</strong>, not expired</div>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start">
+                            <div style="width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#4ade80;flex-shrink:0">3</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.6)"><code style="font-family:'Courier New',monospace;font-size:11px;color:#4ade80">return user.name</code><br>→ "Alice" ✅ — attribute still accessible</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session lifecycle -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">The Async Session Lifecycle — Two Patterns</div>
+        <div class="diag-sub">Both patterns are correct. The <code class="ic">begin()</code> pattern auto-commits on success and auto-rolls back on exception — use it for most cases. The manual pattern gives you more control.</div>
+        <div class="two-col" style="margin-top:0">
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">PATTERN 1 — auto-commit with begin()</span></div>
+                <pre><code><span class="cc"># session.begin() auto-commits on exit,</span>
+<span class="cc"># auto-rollbacks if an exception is raised</span>
+
+<span class="ck">async def</span> <span class="cf">create_user</span>(name: str):
+    <span class="ck">async with</span> AsyncSessionLocal() <span class="ck">as</span> session:
+        <span class="ck">async with</span> session.<span class="cm">begin</span>():   <span class="cc"># auto-commit here</span>
+            user = <span class="cf">User</span>(name=name)
+            session.<span class="cm">add</span>(user)
+            <span class="cc"># commit happens automatically on __aexit__</span>
+            <span class="cc"># rollback happens automatically on exception</span>
+        <span class="ck">return</span> user  <span class="cc"># safe because expire_on_commit=False</span>
+
+
+<span class="cc"># Shorthand — combine both context managers</span>
+<span class="ck">async def</span> <span class="cf">get_user</span>(user_id: int):
+    <span class="ck">async with</span> AsyncSessionLocal() <span class="ck">as</span> session, \
+               session.<span class="cm">begin</span>():
+        <span class="ck">return await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)</code></pre>
+            </div>
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">PATTERN 2 — manual commit / rollback</span></div>
+                <pre><code><span class="cc"># Full manual control — useful when you need</span>
+<span class="cc"># to inspect results before deciding to commit</span>
+
+<span class="ck">async def</span> <span class="cf">transfer_funds</span>(from_id, to_id, amount):
+    <span class="ck">async with</span> AsyncSessionLocal() <span class="ck">as</span> session:
+        <span class="ck">try</span>:
+            sender = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">Account</span>, from_id)
+            receiver = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">Account</span>, to_id)
+
+            sender.balance -= amount
+            receiver.balance += amount
+
+            <span class="ck">await</span> session.<span class="cm">commit</span>()   <span class="cc"># explicit commit</span>
+        <span class="ck">except</span> Exception:
+            <span class="ck">await</span> session.<span class="cm">rollback</span>() <span class="cc"># explicit rollback</span>
+            <span class="ck">raise</span></code></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PART 3 -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Async Queries — All the Methods You Need</div>
+        <div class="part-desc">How to write SELECT, INSERT, UPDATE, and DELETE in async. The same <code style="font-family:monospace;font-size:13px;color:var(--orange)">select()</code> API — just with <code style="font-family:monospace;font-size:13px;color:var(--orange)">await</code>.</div>
+    </div>
+</div>
+
+<!-- SECTION 3 -->
+<section class="section" id="s3">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Async CRUD — Every Query Type With Code</h2>
+            <div class="sec-copy">
+                <p>The query-building API (<code class="ic">select()</code>, <code class="ic">update()</code>, <code class="ic">delete()</code>) is <strong>identical</strong> in async. The only difference is that you <code class="ic">await</code> the <code class="ic">session.execute()</code> call that sends it to the database.</p>
+                <p>The result-fetching methods (<code class="ic">.scalar()</code>, <code class="ic">.scalars()</code>, <code class="ic">.all()</code>, <code class="ic">.one()</code>) are called on the result object and are <strong>not</strong> awaited — they just process data already in memory.</p>
+            </div>
+
+            <!-- Method reference table -->
+            <div style="background:var(--dark);border-radius:12px;overflow:hidden;margin-top:22px">
+                <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase">AsyncSession method reference</div>
+                </div>
+                <table class="method-table">
+                    <thead><tr><th>Method</th><th>Returns</th><th>Use when</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="mt-method">await session.execute(stmt)</span></td>
+                            <td><span class="mt-returns">Result</span></td>
+                            <td><span class="mt-desc">Any query — then call .scalars(), .scalar(), etc.</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.scalar(stmt)</span></td>
+                            <td><span class="mt-returns">Model | None</span></td>
+                            <td><span class="mt-desc">Get exactly one object or None</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.scalars(stmt)</span></td>
+                            <td><span class="mt-returns">ScalarResult</span></td>
+                            <td><span class="mt-desc">Get multiple objects — call .all() after</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.get(Model, pk)</span></td>
+                            <td><span class="mt-returns">Model | None</span></td>
+                            <td><span class="mt-desc">Fetch by primary key — checks identity map first</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">session.add(obj)</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Stage a new object for INSERT — not awaited</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.flush()</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Send pending SQL to DB without committing</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.commit()</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Commit the current transaction</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.rollback()</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Undo everything since last commit</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.refresh(obj)</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Reload an object's attributes from the DB</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="mt-method">await session.delete(obj)</span></td>
+                            <td><span class="mt-returns">None</span></td>
+                            <td><span class="mt-desc">Mark an object for DELETE on next flush</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">FULL ASYNC CRUD EXAMPLES</span></div>
+                <pre><code><span class="ck">from</span> sqlalchemy <span class="ck">import</span> select, update, delete
+
+<span class="cc"># ── CREATE ──</span>
+<span class="ck">async def</span> <span class="cf">create_user</span>(session: <span class="cf">AsyncSession</span>, name: str):
+    user = <span class="cf">User</span>(name=name, email=<span class="cs">f"</span>{name.lower()}<span class="cs">@example.com"</span>)
+    session.<span class="cm">add</span>(user)           <span class="cc"># not awaited — just stages the object</span>
+    <span class="ck">await</span> session.<span class="cm">flush</span>()        <span class="cc"># sends INSERT, gets auto-generated id</span>
+    <span class="ck">return</span> user
+
+
+<span class="cc"># ── READ ONE ──</span>
+<span class="ck">async def</span> <span class="cf">get_user</span>(session: <span class="cf">AsyncSession</span>, user_id: int):
+    <span class="ck">return await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)  <span class="cc"># uses identity map cache</span>
+
+
+<span class="cc"># ── READ MANY WITH FILTER ──</span>
+<span class="ck">async def</span> <span class="cf">get_active_users</span>(session: <span class="cf">AsyncSession</span>):
+    result = <span class="ck">await</span> session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>)
+        .<span class="cm">where</span>(<span class="cf">User</span>.is_active.<span class="cm">is_</span>(<span class="ck">True</span>))
+        .<span class="cm">order_by</span>(<span class="cf">User</span>.created_at.<span class="cm">desc</span>())
+    )
+    <span class="ck">return</span> result.<span class="cm">scalars</span>().<span class="cm">all</span>()    <span class="cc"># .scalars().all() not awaited</span>
+
+
+<span class="cc"># ── READ SINGLE VALUE ──</span>
+<span class="ck">async def</span> <span class="cf">find_by_email</span>(session: <span class="cf">AsyncSession</span>, email: str):
+    <span class="ck">return await</span> session.<span class="cm">scalar</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>).<span class="cm">where</span>(<span class="cf">User</span>.email == email)
+    )  <span class="cc"># returns User or None directly</span>
+
+
+<span class="cc"># ── UPDATE ──</span>
+<span class="ck">async def</span> <span class="cf">deactivate_user</span>(session: <span class="cf">AsyncSession</span>, user_id: int):
+    user = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)
+    <span class="ck">if</span> user:
+        user.is_active = <span class="ck">False</span>   <span class="cc"># ORM tracks this change</span>
+        <span class="ck">await</span> session.<span class="cm">flush</span>()     <span class="cc"># sends UPDATE</span>
+
+
+<span class="cc"># ── BULK UPDATE ──</span>
+<span class="ck">async def</span> <span class="cf">expire_old_sessions</span>(session: <span class="cf">AsyncSession</span>, before):
+    <span class="ck">await</span> session.<span class="cm">execute</span>(
+        <span class="cm">update</span>(<span class="cf">UserSession</span>)
+        .<span class="cm">where</span>(<span class="cf">UserSession</span>.expires_at <= before)
+        .<span class="cm">values</span>(is_expired=<span class="ck">True</span>)
+    )
+
+
+<span class="cc"># ── DELETE ──</span>
+<span class="ck">async def</span> <span class="cf">delete_user</span>(session: <span class="cf">AsyncSession</span>, user_id: int):
+    user = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)
+    <span class="ck">if</span> user:
+        <span class="ck">await</span> session.<span class="cm">delete</span>(user)
+        <span class="ck">await</span> session.<span class="cm">flush</span>()</code></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PART 4 -->
+<div class="part-divider reveal">
+    <div class="part-num">04</div>
+    <div>
+        <div class="part-title">Relationships in Async — The Biggest Gotcha</div>
+        <div class="part-desc">Lazy loading silently breaks in async. Learn what goes wrong and exactly how to fix it.</div>
+    </div>
+</div>
+
+<!-- SECTION 4 -->
+<section class="section" id="s4">
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">04 / 04</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Lazy Loading Does Not Work in Async — Here's Why</h2>
+            <div class="sec-copy">
+                <p>In sync SQLAlchemy, accessing <code class="ic">user.orders</code> on a loaded user automatically fires a new SQL query to fetch the orders. This is <strong>lazy loading</strong> — it happens silently, behind the scenes.</p>
+                <p>In async SQLAlchemy, this silent database call is not allowed. Async requires all I/O to be explicitly <code class="ic">awaited</code>. A lazy load triggered by a simple attribute access has no <code class="ic">await</code>, so SQLAlchemy cannot run the query — and raises a <code class="ic">MissingGreenlet</code> error instead.</p>
+                <p>The fix is simple: <strong>always load relationships eagerly</strong> in async. Use <code class="ic">selectinload()</code> or <code class="ic">joinedload()</code> in your query so the related data is fetched before you access it.</p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">MissingGreenlet — the async lazy load error</div>
+                <p>If you see <code class="ic">sqlalchemy.exc.MissingGreenlet</code> or <code class="ic">greenlet_spawn has not been called</code>, it means you accessed a lazy-loaded relationship outside an async context. Fix: add <code class="ic">selectinload()</code> or <code class="ic">joinedload()</code> to your query.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">LAZY LOADING — BREAKS IN ASYNC</span></div>
+                <pre><code><span class="cc"># ❌ This FAILS in async — lazy load triggered outside await</span>
+<span class="ck">async def</span> <span class="cf">get_user_with_orders_broken</span>(session, user_id):
+    user = <span class="ck">await</span> session.<span class="cm">get</span>(<span class="cf">User</span>, user_id)
+    <span class="cc"># user.orders triggers a new SQL query</span>
+    <span class="cc"># but there's no 'await' — CRASH!</span>
+    <span class="ck">return</span> user.orders  <span class="cc"># → MissingGreenlet error</span>
+
+
+<span class="cc"># ✅ Fix 1: selectinload — separate SELECT for each relationship</span>
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> selectinload
+
+<span class="ck">async def</span> <span class="cf">get_user_with_orders</span>(session, user_id):
+    result = <span class="ck">await</span> session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>)
+        .<span class="cm">options</span>(<span class="cm">selectinload</span>(<span class="cf">User</span>.orders))  <span class="cc"># load orders upfront</span>
+        .<span class="cm">where</span>(<span class="cf">User</span>.id == user_id)
+    )
+    user = result.<span class="cm">scalar_one_or_none</span>()
+    <span class="ck">return</span> user.orders  <span class="cc"># ✅ already loaded — no lazy call needed</span>
+
+
+<span class="cc"># ✅ Fix 2: joinedload — single SQL with LEFT JOIN</span>
+<span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> joinedload
+
+<span class="ck">async def</span> <span class="cf">get_user_joined</span>(session, user_id):
+    result = <span class="ck">await</span> session.<span class="cm">execute</span>(
+        <span class="cm">select</span>(<span class="cf">User</span>)
+        .<span class="cm">options</span>(<span class="cm">joinedload</span>(<span class="cf">User</span>.profile))  <span class="cc"># good for one-to-one</span>
+        .<span class="cm">where</span>(<span class="cf">User</span>.id == user_id)
+    )
+    <span class="ck">return</span> result.<span class="cm">unique</span>().<span class="cm">scalar_one_or_none</span>()</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Which loader to use -->
+    <div class="reveal" style="margin-top:48px">
+        <div class="diag-title">Which Loading Strategy to Use in Async</div>
+        <div class="diag-sub">All three strategies work in async — the rule is just that you must choose one explicitly. Never rely on lazy loading.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:32px">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Strategy</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">How it works</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Best for</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Async safe?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:13px;color:var(--orange-dark);font-weight:600">selectinload()</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">1 extra SELECT per relationship. Uses IN clause.</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Collections (one-to-many, many-to-many)</td>
+                        <td style="padding:11px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">✅ Yes</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:13px;color:var(--orange-dark);font-weight:600">joinedload()</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Adds a LEFT OUTER JOIN to the main query.</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Single related objects (many-to-one, one-to-one)</td>
+                        <td style="padding:11px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">✅ Yes</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:13px;color:var(--orange-dark);font-weight:600">lazy="select"</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Fires a SELECT when the attribute is first accessed.</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Sync code only</td>
+                        <td style="padding:11px 20px"><span style="background:rgba(239,68,68,0.1);color:#7f1d1d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">❌ MissingGreenlet</span></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:11px 20px;font-family:'Courier New',monospace;font-size:13px;color:var(--orange-dark);font-weight:600">lazy="raise"</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Raises an error on access — forces explicit loading.</td>
+                        <td style="padding:11px 20px;font-size:13px;color:var(--muted)">Catching accidental lazy loads in async</td>
+                        <td style="padding:11px 20px"><span style="background:rgba(240,165,0,0.12);color:#78350f;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">⚠️ Raises on access</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Real-world pattern -->
+        <div class="two-col" style="margin-top:0">
+            <div class="cb" style="margin:0">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">NESTED EAGER LOADING IN ASYNC</span></div>
+                <pre><code><span class="ck">from</span> sqlalchemy.orm <span class="ck">import</span> selectinload, joinedload, load_only
+
+<span class="cc"># Load user → orders → each order's product</span>
+result = <span class="ck">await</span> session.<span class="cm">execute</span>(
+    <span class="cm">select</span>(<span class="cf">User</span>)
+    .<span class="cm">options</span>(
+        <span class="cm">selectinload</span>(<span class="cf">User</span>.orders)           <span class="cc"># load orders</span>
+        .<span class="cm">selectinload</span>(<span class="cf">Order</span>.products),       <span class="cc"># then each order's products</span>
+        <span class="cm">joinedload</span>(<span class="cf">User</span>.profile)              <span class="cc"># and the profile via JOIN</span>
+    )
+    .<span class="cm">where</span>(<span class="cf">User</span>.is_active.<span class="cm">is_</span>(<span class="ck">True</span>))
+)
+users = result.<span class="cm">unique</span>().<span class="cm">scalars</span>().<span class="cm">all</span>()
+<span class="cc"># .unique() needed when joinedload is used — deduplicates rows</span>
+
+<span class="cc"># Load only specific columns (performance) </span>
+result = <span class="ck">await</span> session.<span class="cm">execute</span>(
+    <span class="cm">select</span>(<span class="cf">User</span>)
+    .<span class="cm">options</span>(
+        <span class="cm">load_only</span>(<span class="cf">User</span>.id, <span class="cf">User</span>.name, <span class="cf">User</span>.email),
+        <span class="cm">selectinload</span>(<span class="cf">User</span>.orders)
+        .<span class="cm">load_only</span>(<span class="cf">Order</span>.id, <span class="cf">Order</span>.total)
+    )
+)</code></pre>
+            </div>
+            <div>
+                <div class="callout callout-purple" style="margin-top:0">
+                    <div class="callout-hl">Use lazy="raise" in models</div>
+                    <p>Set <code class="ic">lazy="raise"</code> on relationships in your model definitions. This makes SQLAlchemy immediately raise an error if you accidentally trigger a lazy load — instead of silently running a query in sync code or crashing with a cryptic error in async. It forces you to be explicit.</p>
+                </div>
+                <div class="cb" style="margin-top:14px">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">ASYNC-SAFE MODEL DEFINITION</span></div>
+                    <pre><code><span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id:   <span class="cf">Mapped</span>[int] = <span class="cm">mapped_column</span>(primary_key=<span class="ck">True</span>)
+    name: <span class="cf">Mapped</span>[str]
+
+    <span class="cc"># lazy="raise" — forces you to always use</span>
+    <span class="cc"># selectinload() or joinedload() in queries</span>
+    orders: <span class="cf">Mapped</span>[<span class="cf">List</span>[<span class="cs">"Order"</span>]] = <span class="cm">relationship</span>(
+        back_populates=<span class="cs">"user"</span>,
+        lazy=<span class="cs">"raise"</span>,  <span class="cc"># crash loudly if lazy-loaded</span>
+    )</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gotcha cards -->
+    <div class="reveal" style="margin-top:48px">
+        <div class="diag-title">Common Async SQLAlchemy Mistakes — and How to Fix Them</div>
+        <div class="diag-sub">These are the four errors every developer hits when first switching from sync to async SQLAlchemy.</div>
+        <div class="gotcha-grid">
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">💥</div>
+                    <div class="gc-title">MissingGreenlet on attribute access</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> Accessing a lazy-loaded relationship outside an async context.<br><br><strong>Fix:</strong> Add <code class="ic">selectinload()</code> or <code class="ic">joinedload()</code> to your query before the session closes.</div>
+            </div>
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">🚫</div>
+                    <div class="gc-title">Attributes are None after commit</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> <code class="ic">expire_on_commit=True</code> (the default) expires all attributes after commit.<br><br><strong>Fix:</strong> Set <code class="ic">expire_on_commit=False</code> in <code class="ic">async_sessionmaker()</code>. Always do this in async apps.</div>
+            </div>
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">🔗</div>
+                    <div class="gc-title">Using sync engine with async session</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> Mixing <code class="ic">create_engine()</code> with <code class="ic">AsyncSession</code>.<br><br><strong>Fix:</strong> Always pair <code class="ic">create_async_engine()</code> with <code class="ic">async_sessionmaker()</code>. Also make sure the DB URL uses <code class="ic">+asyncpg</code>.</div>
+            </div>
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">⏳</div>
+                    <div class="gc-title">Forgetting await on session methods</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> Writing <code class="ic">session.execute()</code> instead of <code class="ic">await session.execute()</code>. The call returns a coroutine object, not a result.<br><br><strong>Fix:</strong> Any session method that hits the DB needs <code class="ic">await</code>. Only <code class="ic">session.add()</code> and <code class="ic">.expire_all()</code> do not.</div>
+            </div>
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">🔄</div>
+                    <div class="gc-title">Sharing a session across tasks</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> One session shared between multiple <code class="ic">asyncio.Task</code>s or coroutines running concurrently.<br><br><strong>Fix:</strong> Each request or task gets its own session. Sessions are not thread-safe or task-safe. Create and close them per unit of work.</div>
+            </div>
+            <div class="gotcha-card">
+                <div class="gc-head">
+                    <div class="gc-icon">📦</div>
+                    <div class="gc-title">Using scoped_session in async</div>
+                </div>
+                <div class="gc-body"><strong>Cause:</strong> <code class="ic">scoped_session</code> relies on thread-local storage — useless in async where many tasks share one thread.<br><br><strong>Fix:</strong> Use <code class="ic">async_sessionmaker</code> and pass the session as a parameter or via dependency injection (FastAPI's <code class="ic">Depends</code>).</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">Up next — Module 11</div>
+            <div class="mf-title">FastAPI <em>Integration</em></div>
+        </div>
+        <a href="fastapi-integration.html" class="btn-next">
+            Start Module 11
+            <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

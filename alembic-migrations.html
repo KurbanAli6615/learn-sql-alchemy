@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrations with Alembic — Master SQLAlchemy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --red: #ef4444;
+            --teal: #14b8a6;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--dark); overflow-x: hidden; }
+
+        /* ── NAV ── */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; background: rgba(26,28,32,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(240,165,0,0.12); }
+        .nav-back { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-back:hover { color: #fff; }
+        .nav-back svg { transition: transform 0.2s; }
+        .nav-back:hover svg { transform: translateX(-3px); }
+        .nav-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+        .nav-progress strong { color: var(--orange); }
+        .nav-next { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .nav-next:hover { color: var(--orange); }
+        .nav-mid { display: flex; align-items: center; gap: 12px; }
+        .nav-home { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .nav-home:hover { color: var(--orange); }
+        .nav-sep { color: rgba(255,255,255,0.18); font-size: 14px; user-select: none; }
+
+        /* ── HERO ── */
+        .mod-hero { min-height: 68vh; background: var(--dark); display: flex; align-items: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+        .mod-hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px); background-size: 48px 48px; }
+        .hero-wm { position: absolute; right: -40px; top: 50%; transform: translateY(-50%); font-size: clamp(100px, 17vw, 220px); font-weight: 900; color: rgba(240,165,0,0.04); line-height: 1; letter-spacing: -8px; user-select: none; pointer-events: none; }
+        .mod-hero-inner { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+        .mod-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+        .mod-tag { font-size: 11px; font-weight: 800; color: var(--dark); background: var(--orange); padding: 5px 14px; border-radius: 100px; letter-spacing: 1.5px; }
+        .mod-of { font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 500; }
+        .mod-title { font-size: clamp(36px, 5.5vw, 68px); font-weight: 900; color: #fff; line-height: 0.96; letter-spacing: -3px; margin-bottom: 24px; }
+        .mod-title em { color: var(--orange); font-style: normal; display: block; }
+        .mod-desc { font-size: 17px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 620px; margin-bottom: 36px; }
+        .mod-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; }
+        .chip-dot { width: 5px; height: 5px; background: var(--orange); border-radius: 50%; }
+
+        /* ── LAYOUT ── */
+        .page { max-width: 1140px; margin: 0 auto; padding: 0 48px; }
+        .section { padding: 88px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .sec-label { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .sec-n { font-size: 10px; font-weight: 800; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sec-rule { flex: 1; height: 1px; background: rgba(240,165,0,0.22); }
+        .sec-title { font-size: clamp(24px, 3vw, 38px); font-weight: 800; color: var(--dark); line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .sec-copy { font-size: 15.5px; color: #454748; line-height: 1.82; }
+        .sec-copy p + p { margin-top: 16px; }
+        .sec-copy strong { color: var(--dark); font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+
+        /* ── CALLOUTS ── */
+        .callout { margin-top: 22px; background: rgba(240,165,0,0.07); border-left: 3px solid var(--orange); border-radius: 0 9px 9px 0; padding: 14px 18px; }
+        .callout-hl { font-size: 11px; font-weight: 800; color: var(--orange-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .callout p { font-size: 13.5px; color: var(--dark); line-height: 1.6; }
+        .callout-green { background: rgba(34,197,94,0.07); border-left-color: var(--green); }
+        .callout-green .callout-hl { color: #14532d; }
+        .callout-blue  { background: rgba(59,130,246,0.07); border-left-color: var(--blue); }
+        .callout-blue .callout-hl  { color: #1d4ed8; }
+        .callout-red   { background: rgba(239,68,68,0.07); border-left-color: var(--red); }
+        .callout-red .callout-hl   { color: #7f1d1d; }
+        .callout-teal  { background: rgba(20,184,166,0.07); border-left-color: var(--teal); }
+        .callout-teal .callout-hl  { color: #0f766e; }
+        .callout-purple{ background: rgba(168,85,247,0.07); border-left-color: var(--purple); }
+        .callout-purple .callout-hl{ color: #581c87; }
+
+        /* ── CODE ── */
+        .cb { background: #1a1c20; border-radius: 12px; overflow: hidden; margin: 18px 0; }
+        .cb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .cb-dots { display: flex; gap: 5px; }
+        .cb-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .cb-lang { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
+        .cb pre { padding: 18px 20px; overflow-x: auto; line-height: 1.75; }
+        .cb code { font-family: 'Courier New', monospace; color: #d4d4d4; font-size: 13px; }
+        .ck{color:#CF7500} .cs{color:#87c264} .cc{color:#6b7280;font-style:italic}
+        .cf{color:#F0A500} .cn{color:#7ec8e3} .cm{color:#c084fc} .csql{color:#38bdf8}
+        code.ic { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: var(--orange-dark); }
+
+        /* ── REVEAL ── */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+
+        /* ── PART DIVIDER ── */
+        .part-divider { background: var(--dark); padding: 28px 36px; border-radius: 16px; margin: 60px 0 0; display: flex; align-items: center; gap: 20px; }
+        .part-num { font-size: 48px; font-weight: 900; color: rgba(240,165,0,0.2); line-height: 1; letter-spacing: -3px; flex-shrink: 0; }
+        .part-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+        .part-desc  { font-size: 13.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.6; }
+
+        /* ── DIAG HELPERS ── */
+        .diag-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+        .diag-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+        .dark-box   { background: var(--dark); border-radius: 16px; padding: 32px; margin: 36px 0; }
+        .dark-box-title { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 22px; }
+
+        /* ══ PROBLEM CARDS ══ */
+        .problem-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+        .prob-card { border-radius: 10px; padding: 16px; }
+        .prob-dev  { background: rgba(59,130,246,0.12); border: 1.5px solid rgba(59,130,246,0.25); }
+        .prob-prod { background: rgba(239,68,68,0.12); border: 1.5px solid rgba(239,68,68,0.25); }
+        .prob-icon { font-size: 22px; margin-bottom: 8px; }
+        .prob-name { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+        .prob-dev  .prob-name { color: #60a5fa; }
+        .prob-prod .prob-name { color: #fca5a5; }
+        .prob-rows { display: flex; flex-direction: column; gap: 5px; }
+        .prob-row  { font-family: 'Courier New', monospace; font-size: 11px; padding: 4px 8px; border-radius: 4px; }
+        .pr-has    { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .pr-miss   { background: rgba(239,68,68,0.12); color: #fca5a5; text-decoration: line-through; }
+        .prob-chaos { grid-column: 1/-1; background: rgba(239,68,68,0.08); border: 2px dashed rgba(239,68,68,0.3); border-radius: 10px; padding: 14px; text-align: center; }
+        .prob-chaos-text { font-size: 14px; font-weight: 800; color: #fca5a5; }
+        .prob-chaos-sub  { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+        /* ══ STACK DIAGRAM ══ */
+        .stack-diagram { display: flex; flex-direction: column; gap: 0; }
+        .stack-layer { border-radius: 0; padding: 14px 20px; display: flex; align-items: center; gap: 14px; position: relative; }
+        .stack-layer:first-child { border-radius: 10px 10px 0 0; }
+        .stack-layer:last-child  { border-radius: 0 0 10px 10px; }
+        .sl-py    { background: rgba(59,130,246,0.15); border: 1.5px solid rgba(59,130,246,0.25); }
+        .sl-alembic{ background: rgba(240,165,0,0.15); border: 1.5px solid rgba(240,165,0,0.3); border-top: none; }
+        .sl-sqla  { background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.25); border-top: none; }
+        .sl-db    { background: rgba(168,85,247,0.12); border: 1.5px solid rgba(168,85,247,0.25); border-top: none; }
+        .sl-icon  { font-size: 22px; flex-shrink: 0; }
+        .sl-name  { font-size: 13px; font-weight: 800; }
+        .sl-desc  { font-size: 11.5px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+        .sl-alembic .sl-name { color: var(--orange); }
+        .sl-py    .sl-name   { color: #93c5fd; }
+        .sl-sqla  .sl-name   { color: #4ade80; }
+        .sl-db    .sl-name   { color: #c084fc; }
+        .stack-arrow { text-align: center; color: rgba(255,255,255,0.2); font-size: 14px; line-height: 1; margin: -1px 0; z-index: 1; position: relative; }
+
+        /* ══ FILE TREE ══ */
+        .file-tree { background: #1a1c20; border-radius: 12px; padding: 24px; font-family: 'Courier New', monospace; }
+        .ft-title  { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .ft-item   { display: flex; align-items: flex-start; gap: 10px; padding: 4px 0; }
+        .ft-indent { padding-left: 20px; }
+        .ft-indent2{ padding-left: 40px; }
+        .ft-name   { font-size: 12.5px; }
+        .ft-folder { color: var(--orange); }
+        .ft-config { color: #60a5fa; }
+        .ft-python { color: #4ade80; }
+        .ft-mako   { color: #c084fc; }
+        .ft-badge  { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-left: 8px; white-space: nowrap; }
+        .fb-key    { background: rgba(240,165,0,0.2); color: var(--orange); }
+        .fb-auto   { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .fb-edit   { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .ft-note   { font-size: 10.5px; color: rgba(255,255,255,0.3); margin-left: auto; padding-left: 12px; white-space: nowrap; }
+
+        /* ══ VERSION CHAIN ══ */
+        .version-chain { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 8px 0 16px; }
+        .vc-node   { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+        .vc-dot    { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; border: 2px solid; }
+        .vc-dot-base   { background: rgba(107,114,128,0.2); border-color: rgba(107,114,128,0.4); color: #9ca3af; }
+        .vc-dot-done   { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.5); color: #4ade80; }
+        .vc-dot-head   { background: rgba(240,165,0,0.2); border-color: var(--orange); color: var(--orange); }
+        .vc-label  { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); text-align: center; max-width: 80px; line-height: 1.4; }
+        .vc-rev    { font-size: 9px; font-family: 'Courier New', monospace; color: rgba(255,255,255,0.3); }
+        .vc-arrow  { flex-shrink: 0; padding: 0 8px; padding-bottom: 28px; color: rgba(255,255,255,0.2); font-size: 20px; }
+
+        /* ══ COMMAND REFERENCE ══ */
+        .cmd-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 0; }
+        .cmd-card  { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px; }
+        .cmd-badge { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; display: inline-block; margin-bottom: 8px; }
+        .cmdb-up   { background: rgba(34,197,94,0.18); color: #4ade80; }
+        .cmdb-down { background: rgba(239,68,68,0.18); color: #fca5a5; }
+        .cmdb-info { background: rgba(59,130,246,0.18); color: #93c5fd; }
+        .cmd-code  { font-family: 'Courier New', monospace; font-size: 12px; color: var(--orange); margin-bottom: 6px; }
+        .cmd-desc  { font-size: 11.5px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+
+        /* ══ UPGRADE/DOWNGRADE VISUAL ══ */
+        .ud-visual { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 0; }
+        .ud-side   { display: flex; flex-direction: column; gap: 6px; }
+        .ud-title  { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .ud-up-title  { color: #4ade80; }
+        .ud-dn-title  { color: #fca5a5; }
+        .ud-step   { display: flex; align-items: center; gap: 10px; }
+        .ud-ver    { font-size: 10px; font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .uv-done   { background: rgba(34,197,94,0.2); color: #4ade80; border: 1.5px solid rgba(34,197,94,0.4); }
+        .uv-grey   { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1.5px solid rgba(107,114,128,0.3); }
+        .uv-head   { background: rgba(240,165,0,0.2); color: var(--orange); border: 1.5px solid rgba(240,165,0,0.5); }
+        .ud-vname  { font-size: 11px; color: rgba(255,255,255,0.5); font-family: 'Courier New', monospace; }
+        .ud-sep    { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; }
+        .ud-sep-line { width: 2px; flex: 1; background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+        /* ══ OPERATIONS TABLE ══ */
+        /* uses standard HTML table */
+
+        /* ══ ANALOGY CARD ══ */
+        .analogy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+        .analogy-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .ac-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .ac-icon { font-size: 22px; }
+        .ac-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .ac-body { padding: 14px 16px; font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+        /* ══ BEST PRACTICE CHECKLIST ══ */
+        .bp-list { display: flex; flex-direction: column; gap: 10px; margin-top: 0; }
+        .bp-item { display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1.5px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+        .bp-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+        .bp-do   .bp-icon { background: rgba(34,197,94,0.12); }
+        .bp-dont .bp-icon { background: rgba(239,68,68,0.1); }
+        .bp-text-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
+        .bp-text-desc  { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+        /* ══ WORKFLOW ══ */
+        .wf-track { display: flex; flex-direction: column; gap: 0; }
+        .wf-step  { display: flex; align-items: stretch; gap: 16px; }
+        .wf-left  { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+        .wf-circle{ width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
+        .wf-line  { flex: 1; width: 2px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+        .wf-body  { padding-bottom: 24px; flex: 1; }
+        .wf-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+        .wf-desc  { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+        .wf-code  { font-family: 'Courier New', monospace; font-size: 11px; color: rgba(255,255,255,0.6); background: rgba(0,0,0,0.25); padding: 5px 10px; border-radius: 5px; margin-top: 8px; display: inline-block; }
+
+        /* ── PERF GRID ── */
+        .perf-grid  { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-top: 28px; }
+        .perf-card  { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .pc-head    { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .pc-icon    { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .pc-icon-teal   { background: rgba(20,184,166,0.1); }
+        .pc-icon-orange { background: rgba(240,165,0,0.1); }
+        .pc-icon-blue   { background: rgba(59,130,246,0.1); }
+        .pc-icon-green  { background: rgba(34,197,94,0.1); }
+        .pc-icon-purple { background: rgba(168,85,247,0.1); }
+        .pc-icon-red    { background: rgba(239,68,68,0.1); }
+        .pc-name    { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .pc-body    { padding: 14px 16px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+        /* ── MOD FOOTER ── */
+        .mod-foot { background: var(--dark); padding: 72px 48px; }
+        .mod-foot-inner { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .mf-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .mf-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; }
+        .mf-title em { color: var(--orange); font-style: normal; }
+        .btn-next { display: inline-flex; align-items: center; gap: 10px; background: var(--orange); color: var(--dark); font-family: var(--font); font-size: 14px; font-weight: 700; padding: 15px 30px; border-radius: 10px; text-decoration: none; transition: background 0.25s, transform 0.25s; }
+        .btn-next:hover { background: var(--orange-dark); transform: translateY(-2px); }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+        @media (max-width: 960px) {
+            nav, .mod-hero, .page, .mod-foot { padding-left: 24px; padding-right: 24px; }
+            .two-col, .analogy-grid, .perf-grid, .cmd-grid { grid-template-columns: 1fr; gap: 32px; }
+            .problem-grid { grid-template-columns: 1fr; }
+            .ud-visual { grid-template-columns: 1fr; }
+            .ud-sep { display: none; }
+            .mod-foot-inner { flex-direction: column; gap: 28px; align-items: flex-start; }
+        }
+        @media (max-width: 580px) { .nav-next { display: none; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="session-management.html" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Session Management
+    </a>
+    <div class="nav-mid">
+        <a href="index.html" class="nav-home">
+            <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M1 7L7 1.5 13 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6V12.5h3.2V9.2h2.6v3.3H11.5V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Home
+        </a>
+        <span class="nav-sep">|</span>
+        <span class="nav-progress">Module <strong>09</strong></span>
+    </div>
+    <a href="async-sqlalchemy.html" class="nav-next">
+        Async SQLAlchemy
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+</nav>
+
+<header class="mod-hero">
+    <div class="hero-wm">MIGRATE</div>
+    <div class="mod-hero-inner">
+        <div class="mod-eyebrow">
+            <span class="mod-tag">MODULE 09</span>
+        </div>
+        <h1 class="mod-title">Migrations<em>with Alembic</em></h1>
+        <p class="mod-desc">
+            Your database schema changes over time — you add columns, rename tables, create indexes.
+            Alembic keeps track of every change, lets every developer stay in sync, and lets you
+            safely roll back if something goes wrong. Think of it as <strong style="color:rgba(255,255,255,0.75)">Git for your database</strong>.
+        </p>
+        <div class="mod-chips">
+            <div class="chip"><div class="chip-dot"></div>What is Alembic</div>
+            <div class="chip"><div class="chip-dot"></div>Project Setup</div>
+            <div class="chip"><div class="chip-dot"></div>Creating Migrations</div>
+            <div class="chip"><div class="chip-dot"></div>upgrade / downgrade</div>
+            <div class="chip"><div class="chip-dot"></div>Auto-generate</div>
+            <div class="chip"><div class="chip-dot"></div>Best Practices</div>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+<!-- ══ PART 1 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">01</div>
+    <div>
+        <div class="part-title">Introduction to Alembic</div>
+        <div class="part-desc">The problem Alembic solves, what it actually is, and how it fits alongside SQLAlchemy.</div>
+    </div>
+</div>
+
+<!-- SECTION 1 -->
+<section class="section" id="s1">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">01 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">The Problem — Databases Change, But How Do You Track That?</h2>
+            <div class="sec-copy">
+                <p>When you build an app, your database tables change all the time. You add a new column, rename one, add an index. In code, you just edit a file and commit it to Git. But your database is different — it lives on a server, and there is no automatic history of what changed.</p>
+                <p>Imagine two developers working on the same project. Developer A adds a <code class="ic">phone_number</code> column on their laptop. Developer B doesn't have it. Your production server has yet another version. <strong>Nobody knows which version is "correct."</strong></p>
+                <p>Alembic fixes this. Every schema change becomes a numbered <strong>migration file</strong> that lives in your Git repository alongside your code. Anyone who pulls your code can run one command and their database is up to date.</p>
+            </div>
+            <div class="callout callout-teal">
+                <div class="callout-hl">Simple analogy</div>
+                <p>Think of Alembic exactly like Git. Git tracks changes to your <em>code files</em>. Alembic tracks changes to your <em>database tables</em>. Both give you a full history, and both let you go back to any previous version.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <!-- Analogy comparison -->
+            <div style="background:var(--dark);border-radius:14px;padding:24px;margin-bottom:20px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">Git vs Alembic — same idea, different target</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:14px">
+                        <div style="font-size:18px;margin-bottom:8px">📁</div>
+                        <div style="font-size:12px;font-weight:800;color:#60a5fa;margin-bottom:6px">Git</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.45);line-height:1.6">Tracks changes to <strong style="color:rgba(255,255,255,0.7)">code files</strong>. Every commit is a snapshot. You can checkout any old version.</div>
+                    </div>
+                    <div style="background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.25);border-radius:9px;padding:14px">
+                        <div style="font-size:18px;margin-bottom:8px">🗄️</div>
+                        <div style="font-size:12px;font-weight:800;color:var(--orange);margin-bottom:6px">Alembic</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.45);line-height:1.6">Tracks changes to <strong style="color:rgba(255,255,255,0.7)">database tables</strong>. Every migration is a snapshot. You can roll back to any version.</div>
+                    </div>
+                    <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:8px;padding:10px;font-family:'Courier New',monospace;font-size:11px;color:#93c5fd">
+                        git commit -m "add phone field"<br>
+                        git checkout v1.2
+                    </div>
+                    <div style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.15);border-radius:8px;padding:10px;font-family:'Courier New',monospace;font-size:11px;color:#fde68a">
+                        alembic upgrade head<br>
+                        alembic downgrade -1
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 1: The Problem -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">The Problem Without Alembic — Everyone Has a Different Database</div>
+        <div class="diag-sub">Three environments, three different schemas. Nobody agrees on what "the current database" looks like. Bugs appear only in production because it has different columns than development.</div>
+        <div class="dark-box">
+            <div class="dark-box-title">Database state across environments — WITHOUT Alembic</div>
+            <div class="problem-grid">
+                <div class="prob-card prob-dev">
+                    <div class="prob-icon">👩‍💻</div>
+                    <div class="prob-name">Developer A — Laptop</div>
+                    <div class="prob-rows">
+                        <div class="prob-row pr-has">users.id</div>
+                        <div class="prob-row pr-has">users.name</div>
+                        <div class="prob-row pr-has">users.email</div>
+                        <div class="prob-row pr-has">users.phone_number</div>
+                        <div class="prob-row pr-has">users.created_at</div>
+                    </div>
+                </div>
+                <div class="prob-card prob-dev">
+                    <div class="prob-icon">👨‍💻</div>
+                    <div class="prob-name">Developer B — Laptop</div>
+                    <div class="prob-rows">
+                        <div class="prob-row pr-has">users.id</div>
+                        <div class="prob-row pr-has">users.name</div>
+                        <div class="prob-row pr-has">users.email</div>
+                        <div class="prob-row pr-miss">users.phone_number</div>
+                        <div class="prob-row pr-miss">users.created_at</div>
+                    </div>
+                </div>
+                <div class="prob-card prob-prod">
+                    <div class="prob-icon">🖥️</div>
+                    <div class="prob-name">Production Server</div>
+                    <div class="prob-rows">
+                        <div class="prob-row pr-has">users.id</div>
+                        <div class="prob-row pr-miss">users.name</div>
+                        <div class="prob-row pr-has">users.email</div>
+                        <div class="prob-row pr-miss">users.phone_number</div>
+                        <div class="prob-row pr-miss">users.created_at</div>
+                    </div>
+                </div>
+                <div class="prob-chaos">
+                    <div class="prob-chaos-text">💥  Three developers. Three different databases. Zero agreement.</div>
+                    <div class="prob-chaos-sub">Code that works on Dev A crashes on Dev B. Production has missing columns. Nobody knows how to fix it.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 2: How Alembic Fits -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Where Alembic Sits in Your Stack</div>
+        <div class="diag-sub">Alembic is the layer between your Python models and the database. It reads your models, detects what changed, and writes the SQL to update the database safely.</div>
+        <div class="two-col" style="margin-top:0">
+            <div class="dark-box" style="margin:0">
+                <div class="dark-box-title">Technology stack — who does what</div>
+                <div class="stack-diagram">
+                    <div class="stack-layer sl-py">
+                        <div class="sl-icon">🐍</div>
+                        <div>
+                            <div class="sl-name">Your Python Code</div>
+                            <div class="sl-desc">You define models using SQLAlchemy classes. When you add a new column, you add it here first.</div>
+                        </div>
+                    </div>
+                    <div class="stack-arrow">▼</div>
+                    <div class="stack-layer sl-alembic">
+                        <div class="sl-icon">🔄</div>
+                        <div>
+                            <div class="sl-name">Alembic</div>
+                            <div class="sl-desc">Compares your models to the current database, generates migration files, and runs them in order.</div>
+                        </div>
+                    </div>
+                    <div class="stack-arrow">▼</div>
+                    <div class="stack-layer sl-sqla">
+                        <div class="sl-icon">🔗</div>
+                        <div>
+                            <div class="sl-name">SQLAlchemy Core</div>
+                            <div class="sl-desc">Translates migration operations (add_column, create_table) into the correct SQL for your database.</div>
+                        </div>
+                    </div>
+                    <div class="stack-arrow">▼</div>
+                    <div class="stack-layer sl-db">
+                        <div class="sl-icon">🗄️</div>
+                        <div>
+                            <div class="sl-name">Your Database</div>
+                            <div class="sl-desc">PostgreSQL, MySQL, or SQLite. Alembic creates a special <code style="font-size:10px;font-family:'Courier New',monospace;color:#e9d5ff">alembic_version</code> table here to track which migrations have run.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:12px">The <code class="ic">alembic_version</code> table — Alembic's memory</div>
+                <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">
+                    <div style="padding:10px 16px;background:#f8f8f8;border-bottom:1px solid var(--border)">
+                        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">alembic_version table (auto-created by Alembic)</div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead><tr style="background:#f8f8f8"><th style="padding:8px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)">version_num</th></tr></thead>
+                        <tbody>
+                            <tr><td style="padding:10px 16px;font-family:'Courier New',monospace;font-size:13px;color:var(--orange-dark);font-weight:600">3d4e5f6a7b8c</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="font-size:13px;color:var(--muted);line-height:1.7">This single-row table stores the ID of the last migration that ran. Every time you run <code class="ic">alembic upgrade</code>, Alembic checks this table, finds which migrations haven't run yet, and runs them in order.</div>
+                <div class="callout callout-blue" style="margin-top:16px">
+                    <div class="callout-hl">Alembic is a separate package</div>
+                    <p>Alembic is not part of SQLAlchemy — it's a separate library by the same author. Install it with <code class="ic">pip install alembic</code>. It works alongside SQLAlchemy but doesn't require it (though it's almost always used together).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 2 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">02</div>
+    <div>
+        <div class="part-title">Creating and Managing Migrations</div>
+        <div class="part-desc">How to set up Alembic, understand its project structure, create migration files, and run them forward and backward.</div>
+    </div>
+</div>
+
+<!-- SECTION 2 — Setup -->
+<section class="section" id="s2">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">02 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Setting Up Alembic — Four Commands to Get Started</h2>
+            <div class="sec-copy">
+                <p>Getting Alembic running takes four steps. You install it, tell it about your database, point it to your models, and you're ready to create your first migration. The whole setup takes about five minutes.</p>
+                <p>The most important file is <code class="ic">env.py</code> — this is where you connect Alembic to your SQLAlchemy models so it can auto-detect schema changes. Once this is set up, you never touch it again.</p>
+            </div>
+            <div class="callout">
+                <div class="callout-hl">Run these commands once</div>
+                <p>You only run <code class="ic">alembic init alembic</code> once per project to create the folder structure. After that, you use <code class="ic">alembic revision</code> and <code class="ic">alembic upgrade</code> for every change.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div class="cb">
+                <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">SETUP — 4 STEPS</span></div>
+                <pre><code><span class="cc"># Step 1: Install Alembic</span>
+pip install alembic
+
+
+<span class="cc"># Step 2: Initialise Alembic in your project</span>
+<span class="cc"># This creates the alembic/ folder + alembic.ini</span>
+alembic init alembic
+
+
+<span class="cc"># Step 3: Edit alembic.ini — set your database URL</span>
+<span class="cc"># sqlalchemy.url = postgresql://user:pass@localhost/mydb</span>
+
+
+<span class="cc"># Step 4: Edit alembic/env.py — point to your models</span>
+<span class="ck">from</span> myapp.models <span class="ck">import</span> Base
+target_metadata = Base.metadata
+<span class="cc"># This lets Alembic auto-detect your model changes</span></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 3: File Tree -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Alembic Project Structure — What Every File Does</div>
+        <div class="diag-sub">After running <code class="ic">alembic init alembic</code>, this folder structure is created. You only edit two files — everything else is managed automatically.</div>
+        <div class="two-col" style="margin-top:0">
+            <div>
+                <div class="file-tree">
+                    <div class="ft-title">Project folder after alembic init</div>
+                    <div class="ft-item">
+                        <span class="ft-name ft-folder">📁 myproject/</span>
+                    </div>
+                    <div class="ft-indent">
+                        <div class="ft-item">
+                            <span class="ft-name ft-python">📄 models.py</span>
+                            <span class="ft-note">Your SQLAlchemy models</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-config">📄 alembic.ini</span>
+                            <span class="ft-badge fb-edit">you edit</span>
+                            <span class="ft-note">DB URL config</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-folder">📁 alembic/</span>
+                        </div>
+                    </div>
+                    <div class="ft-indent2">
+                        <div class="ft-item">
+                            <span class="ft-name ft-python">📄 env.py</span>
+                            <span class="ft-badge fb-edit">you edit</span>
+                            <span class="ft-note">Links models to Alembic</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-mako">📄 script.py.mako</span>
+                            <span class="ft-badge fb-auto">auto</span>
+                            <span class="ft-note">Migration file template</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-folder">📁 versions/</span>
+                            <span class="ft-note">All your migration files</span>
+                        </div>
+                    </div>
+                    <div style="padding-left:60px">
+                        <div class="ft-item">
+                            <span class="ft-name ft-python">📄 001_create_users.py</span>
+                            <span class="ft-badge fb-auto">generated</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-python">📄 002_add_email.py</span>
+                            <span class="ft-badge fb-auto">generated</span>
+                        </div>
+                        <div class="ft-item">
+                            <span class="ft-name ft-python">📄 003_add_index.py</span>
+                            <span class="ft-badge fb-auto">generated</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">Key section of <code class="ic">env.py</code> — connect Alembic to your models</div>
+                <div class="cb" style="margin:0">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">alembic/env.py — the important part</span></div>
+                    <pre><code><span class="ck">from</span> myapp.database <span class="ck">import</span> engine
+<span class="ck">from</span> myapp.models <span class="ck">import</span> Base
+
+<span class="cc"># Tell Alembic about your models</span>
+<span class="cc"># This is what makes auto-generate work</span>
+target_metadata = Base.metadata
+
+<span class="ck">def</span> <span class="cf">run_migrations_online</span>():
+    connectable = engine
+    <span class="ck">with</span> connectable.<span class="cm">connect</span>() <span class="ck">as</span> connection:
+        context.<span class="cm">configure</span>(
+            connection=connection,
+            target_metadata=target_metadata
+        )
+        <span class="ck">with</span> context.<span class="cm">begin_transaction</span>():
+            context.<span class="cm">run_migrations</span>()</code></pre>
+                </div>
+                <div class="callout callout-green" style="margin-top:12px">
+                    <div class="callout-hl">The key line</div>
+                    <p><code class="ic">target_metadata = Base.metadata</code> — this tells Alembic "here are all my models." Without this, auto-generate won't work and Alembic can't detect your schema changes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 4: Migration File Anatomy -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Inside a Migration File — Every Part Explained</div>
+        <div class="diag-sub">Every migration file has the same structure. There are only two things you need to understand: <code class="ic">upgrade()</code> applies the change, <code class="ic">downgrade()</code> reverses it.</div>
+        <div style="background:var(--dark);border-radius:14px;padding:28px 32px;margin-top:0">
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">Anatomy of a migration file — alembic/versions/002_add_phone.py</div>
+            <div style="display:grid;grid-template-columns:1fr 320px;gap:24px">
+                <div class="cb" style="margin:0">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">002_add_phone_number.py</span></div>
+                    <pre><code><span class="cc">"""add phone number column</span>
+<span class="cc">Revision ID: a1b2c3d4e5f6</span>
+<span class="cc">Revises:     9z8y7x6w5v4u</span>
+<span class="cc">Create Date: 2024-03-15 10:30:00</span>
+<span class="cc">"""</span>
+<span class="ck">from</span> alembic <span class="ck">import</span> op
+<span class="ck">import</span> sqlalchemy <span class="ck">as</span> sa
+
+<span class="cc"># This migration's unique ID</span>
+revision = <span class="cs">'a1b2c3d4e5f6'</span>
+
+<span class="cc"># ID of the migration that comes before this one</span>
+down_revision = <span class="cs">'9z8y7x6w5v4u'</span>
+
+<span class="cc"># These stay the same in every migration file</span>
+branch_labels = <span class="ck">None</span>
+depends_on = <span class="ck">None</span>
+
+
+<span class="ck">def</span> <span class="cf">upgrade</span>():
+    <span class="cc"># What to do going FORWARD</span>
+    op.<span class="cm">add_column</span>(
+        <span class="cs">'users'</span>,
+        sa.<span class="cf">Column</span>(<span class="cs">'phone_number'</span>, sa.<span class="cf">String</span>(<span class="cn">20</span>), nullable=<span class="ck">True</span>)
+    )
+
+
+<span class="ck">def</span> <span class="cf">downgrade</span>():
+    <span class="cc"># What to do going BACKWARD (undo upgrade)</span>
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'phone_number'</span>)</code></pre>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:12px">
+                        <div style="font-size:10px;font-weight:800;color:#60a5fa;margin-bottom:5px;letter-spacing:1px">REVISION ID</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.5);line-height:1.6">A unique hash ID for this migration. Alembic stores this in the <code style="font-family:'Courier New',monospace;font-size:10px">alembic_version</code> table to know it has run.</div>
+                    </div>
+                    <div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:8px;padding:12px">
+                        <div style="font-size:10px;font-weight:800;color:#c084fc;margin-bottom:5px;letter-spacing:1px">DOWN_REVISION</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.5);line-height:1.6">The ID of the migration that came <em>before</em> this one. This is how the chain of migrations is linked — like a linked list.</div>
+                    </div>
+                    <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:12px">
+                        <div style="font-size:10px;font-weight:800;color:#4ade80;margin-bottom:5px;letter-spacing:1px">UPGRADE()</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.5);line-height:1.6">What to do when moving <strong style="color:#4ade80">forward</strong>. Called by <code style="font-family:'Courier New',monospace;font-size:10px">alembic upgrade</code>. This is where you add columns, create tables, etc.</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px">
+                        <div style="font-size:10px;font-weight:800;color:#fca5a5;margin-bottom:5px;letter-spacing:1px">DOWNGRADE()</div>
+                        <div style="font-size:11.5px;color:rgba(255,255,255,0.5);line-height:1.6">What to do when moving <strong style="color:#fca5a5">backward</strong>. Called by <code style="font-family:'Courier New',monospace;font-size:10px">alembic downgrade</code>. Always the exact opposite of upgrade().</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 5: Version Chain -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">The Migration Version Chain — Like a Timeline of Your Database</div>
+        <div class="diag-sub">Every migration points to the one before it using <code class="ic">down_revision</code>. This creates a chain. Alembic walks this chain to know which order to run migrations and how far back to roll.</div>
+        <div class="dark-box">
+            <div class="dark-box-title">Migration chain — each node is one database change</div>
+            <div class="version-chain">
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-base">BASE</div>
+                    <div class="vc-label">Empty database</div>
+                    <div class="vc-rev">down_revision: None</div>
+                </div>
+                <div class="vc-arrow">→</div>
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-done">001</div>
+                    <div class="vc-label">Create users table</div>
+                    <div class="vc-rev">rev: 9z8y…</div>
+                </div>
+                <div class="vc-arrow">→</div>
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-done">002</div>
+                    <div class="vc-label">Add phone column</div>
+                    <div class="vc-rev">rev: a1b2…</div>
+                </div>
+                <div class="vc-arrow">→</div>
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-done">003</div>
+                    <div class="vc-label">Add email index</div>
+                    <div class="vc-rev">rev: x9y8…</div>
+                </div>
+                <div class="vc-arrow">→</div>
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-done">004</div>
+                    <div class="vc-label">Create orders table</div>
+                    <div class="vc-rev">rev: p3q4…</div>
+                </div>
+                <div class="vc-arrow">→</div>
+                <div class="vc-node">
+                    <div class="vc-dot vc-dot-head">HEAD</div>
+                    <div class="vc-label">Current latest version</div>
+                    <div class="vc-rev">alembic upgrade head</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px">
+                <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.15);border-radius:8px;padding:12px">
+                    <div style="font-size:10px;font-weight:700;color:#4ade80;margin-bottom:5px">alembic upgrade head</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,0.4);line-height:1.5">Runs all missing migrations up to the latest (HEAD). Safe to run anytime — skips ones already run.</div>
+                </div>
+                <div style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.15);border-radius:8px;padding:12px">
+                    <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:5px">alembic upgrade +2</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,0.4);line-height:1.5">Runs exactly 2 migrations from the current position. Useful for step-by-step testing.</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:12px">
+                    <div style="font-size:10px;font-weight:700;color:#fca5a5;margin-bottom:5px">alembic downgrade -1</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,0.4);line-height:1.5">Rolls back the last migration. Calls its <code style="font-family:'Courier New',monospace;font-size:10px">downgrade()</code> function and reverts the DB change.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 6: Upgrade/Downgrade visual + Commands -->
+    <div class="reveal" style="margin-top:36px">
+        <div class="diag-title">Upgrade and Downgrade — Moving Through Your Version History</div>
+        <div class="diag-sub">Picture your migrations as a staircase. Upgrading goes up. Downgrading goes down. You always know exactly where you are.</div>
+        <div class="two-col" style="margin-top:0">
+            <div class="dark-box" style="margin:0">
+                <div class="dark-box-title">Staircase — forward and backward through versions</div>
+                <div class="ud-visual">
+                    <div>
+                        <div class="ud-title ud-up-title">⬆ Upgrading (alembic upgrade head)</div>
+                        <div class="ud-side">
+                            <div class="ud-step"><div class="ud-ver uv-head">v4</div><div class="ud-vname">orders table — HEAD ★</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-done">v3</div><div class="ud-vname">email index added</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-done">v2</div><div class="ud-vname">phone column added</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-done">v1</div><div class="ud-vname">users table created</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-grey">—</div><div class="ud-vname" style="color:rgba(255,255,255,0.3)">empty database</div></div>
+                        </div>
+                    </div>
+                    <div class="ud-sep">
+                        <div class="ud-sep-line"></div>
+                        <div style="font-size:18px;color:rgba(255,255,255,0.15)">↕</div>
+                        <div class="ud-sep-line"></div>
+                    </div>
+                    <div>
+                        <div class="ud-title ud-dn-title">⬇ Downgrading (alembic downgrade -2)</div>
+                        <div class="ud-side">
+                            <div class="ud-step"><div class="ud-ver uv-grey">v4</div><div class="ud-vname" style="color:rgba(255,255,255,0.3)">orders table — rolled back</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-grey">v3</div><div class="ud-vname" style="color:rgba(255,255,255,0.3)">email index — rolled back</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-head">v2</div><div class="ud-vname">NOW AT v2 ★</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-done">v1</div><div class="ud-vname">users table</div></div>
+                            <div class="ud-step"><div class="ud-ver uv-grey">—</div><div class="ud-vname" style="color:rgba(255,255,255,0.3)">empty database</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">Every Alembic command you need</div>
+                <div class="dark-box" style="margin:0;padding:20px">
+                    <div class="cmd-grid">
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-info">CREATE</div>
+                            <div class="cmd-code">alembic revision --autogenerate -m "add phone"</div>
+                            <div class="cmd-desc">Auto-detect model changes and create a new migration file.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-info">CREATE</div>
+                            <div class="cmd-code">alembic revision -m "add phone"</div>
+                            <div class="cmd-desc">Create a blank migration file for you to fill in manually.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-up">UPGRADE</div>
+                            <div class="cmd-code">alembic upgrade head</div>
+                            <div class="cmd-desc">Run all pending migrations. Use this after every pull.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-up">UPGRADE</div>
+                            <div class="cmd-code">alembic upgrade +1</div>
+                            <div class="cmd-desc">Run only the next migration in the chain.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-down">ROLLBACK</div>
+                            <div class="cmd-code">alembic downgrade -1</div>
+                            <div class="cmd-desc">Undo the last migration. Runs its downgrade() function.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-down">ROLLBACK</div>
+                            <div class="cmd-code">alembic downgrade base</div>
+                            <div class="cmd-desc">Undo ALL migrations. Returns database to empty state.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-info">STATUS</div>
+                            <div class="cmd-code">alembic current</div>
+                            <div class="cmd-desc">See which migration version the database is currently at.</div>
+                        </div>
+                        <div class="cmd-card">
+                            <div class="cmd-badge cmdb-info">STATUS</div>
+                            <div class="cmd-code">alembic history</div>
+                            <div class="cmd-desc">List all migrations and which ones have been applied.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Migration code examples -->
+    <div class="reveal" style="margin-top:40px">
+        <div class="diag-title">Writing Real Migrations — Common Operations With Code</div>
+        <div class="diag-sub">These are the operations you'll use in 90% of your migrations. Every one is reversible.</div>
+        <div class="two-col" style="margin-top:0">
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">CREATING AND CHANGING TABLES</span></div>
+                    <pre><code><span class="ck">from</span> alembic <span class="ck">import</span> op
+<span class="ck">import</span> sqlalchemy <span class="ck">as</span> sa
+
+<span class="ck">def</span> <span class="cf">upgrade</span>():
+
+    <span class="cc"># Create a brand-new table</span>
+    op.<span class="cm">create_table</span>(
+        <span class="cs">'products'</span>,
+        sa.<span class="cf">Column</span>(<span class="cs">'id'</span>,    sa.<span class="cf">Integer</span>(), primary_key=<span class="ck">True</span>),
+        sa.<span class="cf">Column</span>(<span class="cs">'name'</span>,  sa.<span class="cf">String</span>(<span class="cn">100</span>), nullable=<span class="ck">False</span>),
+        sa.<span class="cf">Column</span>(<span class="cs">'price'</span>, sa.<span class="cf">Numeric</span>(<span class="cn">10</span>, <span class="cn">2</span>)),
+    )
+
+    <span class="cc"># Add a new column to an existing table</span>
+    op.<span class="cm">add_column</span>(
+        <span class="cs">'users'</span>,
+        sa.<span class="cf">Column</span>(<span class="cs">'bio'</span>, sa.<span class="cf">Text</span>(), nullable=<span class="ck">True</span>)
+    )
+
+    <span class="cc"># Rename a column</span>
+    op.<span class="cm">alter_column</span>(
+        <span class="cs">'users'</span>, <span class="cs">'username'</span>,
+        new_column_name=<span class="cs">'display_name'</span>
+    )
+
+    <span class="cc"># Add a database index</span>
+    op.<span class="cm">create_index</span>(
+        <span class="cs">'ix_users_email'</span>,
+        <span class="cs">'users'</span>, [<span class="cs">'email'</span>]
+    )
+
+<span class="ck">def</span> <span class="cf">downgrade</span>():
+    op.<span class="cm">drop_index</span>(<span class="cs">'ix_users_email'</span>, table_name=<span class="cs">'users'</span>)
+    op.<span class="cm">alter_column</span>(<span class="cs">'users'</span>, <span class="cs">'display_name'</span>, new_column_name=<span class="cs">'username'</span>)
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'bio'</span>)
+    op.<span class="cm">drop_table</span>(<span class="cs">'products'</span>)</code></pre>
+                </div>
+            </div>
+            <div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">DATA MIGRATIONS — MOVING DATA</span></div>
+                    <pre><code><span class="cc"># Sometimes you need to move data, not just schema</span>
+<span class="ck">from</span> alembic <span class="ck">import</span> op
+<span class="ck">import</span> sqlalchemy <span class="ck">as</span> sa
+
+<span class="ck">def</span> <span class="cf">upgrade</span>():
+    <span class="cc"># Step 1: Add new column (nullable first)</span>
+    op.<span class="cm">add_column</span>(
+        <span class="cs">'users'</span>,
+        sa.<span class="cf">Column</span>(<span class="cs">'full_name'</span>, sa.<span class="cf">String</span>(), nullable=<span class="ck">True</span>)
+    )
+
+    <span class="cc"># Step 2: Populate data from old columns</span>
+    conn = op.<span class="cm">get_bind</span>()
+    conn.<span class="cm">execute</span>(sa.<span class="cm">text</span>(
+        <span class="cs">"""UPDATE users
+           SET full_name = first_name || ' ' || last_name"""</span>
+    ))
+
+    <span class="cc"># Step 3: Now make it NOT NULL</span>
+    op.<span class="cm">alter_column</span>(<span class="cs">'users'</span>, <span class="cs">'full_name'</span>,
+                    nullable=<span class="ck">False</span>)
+
+    <span class="cc"># Step 4: Drop the old columns</span>
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'first_name'</span>)
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'last_name'</span>)
+
+<span class="ck">def</span> <span class="cf">downgrade</span>():
+    op.<span class="cm">add_column</span>(<span class="cs">'users'</span>, sa.<span class="cf">Column</span>(<span class="cs">'first_name'</span>, sa.<span class="cf">String</span>()))
+    op.<span class="cm">add_column</span>(<span class="cs">'users'</span>, sa.<span class="cf">Column</span>(<span class="cs">'last_name'</span>,  sa.<span class="cf">String</span>()))
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'full_name'</span>)</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations Reference Table -->
+    <div class="reveal" style="margin-top:40px">
+        <div class="diag-title">All Alembic Operations — Quick Reference Table</div>
+        <div class="diag-sub">Every <code class="ic">op.</code> function you will ever need. Bookmark this.</div>
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8f8f8">
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">What you want to do</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Alembic operation</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">SQL it runs</th>
+                        <th style="padding:12px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border)">Reversible?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Create a table</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.create_table()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">CREATE TABLE ...</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — drop_table()</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Delete a table</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.drop_table()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">DROP TABLE ...</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(240,165,0,0.12);color:#78350f;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — recreate it</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Add a column</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.add_column()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">ALTER TABLE ADD COLUMN</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — drop_column()</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Remove a column</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.drop_column()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">ALTER TABLE DROP COLUMN</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — add it back</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Rename / change column</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.alter_column()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">ALTER TABLE ALTER COLUMN</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — rename back</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border);background:#fafafa">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Add an index</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.create_index()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">CREATE INDEX ...</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — drop_index()</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Remove an index</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.drop_index()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">DROP INDEX ...</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(34,197,94,0.12);color:#14532d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">Yes — create_index()</span></td>
+                    </tr>
+                    <tr style="background:#fafafa">
+                        <td style="padding:12px 20px;font-size:13px;font-weight:600;color:var(--dark)">Run raw SQL</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--orange-dark)">op.execute()</td>
+                        <td style="padding:12px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)">Any SQL you write</td>
+                        <td style="padding:12px 20px"><span style="background:rgba(240,165,0,0.12);color:#78350f;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px">You write the reverse</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+<!-- ══ PART 3 ══ -->
+<div class="part-divider reveal">
+    <div class="part-num">03</div>
+    <div>
+        <div class="part-title">Best Practices for Schema Changes</div>
+        <div class="part-desc">Auto-generate vs writing migrations by hand, team workflows, and the rules that prevent painful production incidents.</div>
+    </div>
+</div>
+
+<!-- SECTION 3 -->
+<section class="section" id="s3">
+
+    <div class="two-col">
+        <div class="reveal">
+            <div class="sec-label"><span class="sec-n">03 / 03</span><div class="sec-rule"></div></div>
+            <h2 class="sec-title">Auto-Generate vs Manual — When to Use Which</h2>
+            <div class="sec-copy">
+                <p>Alembic can <strong>automatically generate</strong> migration files by comparing your Python models to the current database. This saves time — you change your model, run one command, and Alembic writes the migration for you.</p>
+                <p>But auto-generate isn't perfect. It can miss some changes (like changing a column's default value or a stored procedure). And it never writes your <code class="ic">downgrade()</code> logic for data migrations. <strong>Always review the generated file before running it.</strong></p>
+            </div>
+            <div class="callout callout-red">
+                <div class="callout-hl">Always review auto-generated migrations</div>
+                <p>Auto-generate compares table structures. It cannot read your mind about data. If you rename a column, it may generate DROP + ADD instead of ALTER. Review the file before running it in production.</p>
+            </div>
+        </div>
+        <div class="reveal">
+            <div style="background:var(--dark);border-radius:14px;padding:24px">
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px">Auto-generate vs manual — choose the right tool</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div style="background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.2);border-radius:10px;padding:14px">
+                        <div style="font-size:11px;font-weight:800;color:#4ade80;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">✨ Auto-generate</div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Adding new columns</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Creating new tables</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Adding indexes</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Changing column types</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#ef4444;font-size:13px;flex-shrink:0">✗</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Data migrations</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#ef4444;font-size:13px;flex-shrink:0">✗</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Stored procedures</span></div>
+                        </div>
+                        <div style="font-family:'Courier New',monospace;font-size:10.5px;color:rgba(255,255,255,0.5);background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:5px;margin-top:10px">alembic revision --autogenerate -m "msg"</div>
+                    </div>
+                    <div style="background:rgba(59,130,246,0.08);border:1.5px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px">
+                        <div style="font-size:11px;font-weight:800;color:#60a5fa;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">✍ Write Manually</div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Moving / copying data</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Seeding default values</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Complex constraints</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Stored procedures / views</span></div>
+                            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#4ade80;font-size:13px;flex-shrink:0">✓</span><span style="font-size:11.5px;color:rgba(255,255,255,0.5)">Splitting / merging tables</span></div>
+                        </div>
+                        <div style="font-family:'Courier New',monospace;font-size:10.5px;color:rgba(255,255,255,0.5);background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:5px;margin-top:10px">alembic revision -m "seed users"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Workflow -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Team Workflow — How Every Developer Stays in Sync</div>
+        <div class="diag-sub">This is the process every developer should follow. It's the same 4-step pattern every time, whether you're adding a column or deploying to production.</div>
+        <div class="two-col" style="margin-top:0">
+            <div class="dark-box" style="margin:0">
+                <div class="dark-box-title">Standard team migration workflow</div>
+                <div class="wf-track">
+                    <div class="wf-step">
+                        <div class="wf-left">
+                            <div class="wf-circle" style="background:rgba(59,130,246,0.2);color:#60a5fa">1</div>
+                            <div class="wf-line"></div>
+                        </div>
+                        <div class="wf-body">
+                            <div class="wf-title" style="color:#93c5fd">Change your SQLAlchemy model</div>
+                            <div class="wf-desc">Add the new column, table, or relationship in your Python model class. Don't touch the database yet.</div>
+                            <div class="wf-code">class User(Base):<br>&nbsp;&nbsp;phone = Column(String)</div>
+                        </div>
+                    </div>
+                    <div class="wf-step">
+                        <div class="wf-left">
+                            <div class="wf-circle" style="background:rgba(240,165,0,0.2);color:var(--orange)">2</div>
+                            <div class="wf-line"></div>
+                        </div>
+                        <div class="wf-body">
+                            <div class="wf-title" style="color:#fde68a">Auto-generate the migration file</div>
+                            <div class="wf-desc">Alembic compares your model to the database, detects the new column, and writes the migration file for you.</div>
+                            <div class="wf-code">alembic revision --autogenerate -m "add phone"</div>
+                        </div>
+                    </div>
+                    <div class="wf-step">
+                        <div class="wf-left">
+                            <div class="wf-circle" style="background:rgba(168,85,247,0.2);color:#c084fc">3</div>
+                            <div class="wf-line"></div>
+                        </div>
+                        <div class="wf-body">
+                            <div class="wf-title" style="color:#e9d5ff">Review and commit the file</div>
+                            <div class="wf-desc">Open the generated file, check that upgrade() and downgrade() look correct, then commit both your model change and the migration file together in one Git commit.</div>
+                            <div class="wf-code">git add models.py alembic/versions/xxx.py<br>git commit -m "add phone number column"</div>
+                        </div>
+                    </div>
+                    <div class="wf-step">
+                        <div class="wf-left">
+                            <div class="wf-circle" style="background:rgba(34,197,94,0.2);color:#4ade80">4</div>
+                            <div class="wf-line" style="background:transparent"></div>
+                        </div>
+                        <div class="wf-body">
+                            <div class="wf-title" style="color:#86efac">Run upgrade on every environment</div>
+                            <div class="wf-desc">After git pull, every developer (and your deployment pipeline) runs this one command to bring their database up to the latest version.</div>
+                            <div class="wf-code">alembic upgrade head</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">Auto-generate in action — full example</div>
+                <div class="cb">
+                    <div class="cb-head"><div class="cb-dots"><span></span><span></span><span></span></div><span class="cb-lang">AUTO-GENERATE FULL EXAMPLE</span></div>
+                    <pre><code><span class="cc"># 1. Current model (already in DB)</span>
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id    = <span class="cf">Column</span>(<span class="cf">Integer</span>, primary_key=<span class="ck">True</span>)
+    name  = <span class="cf">Column</span>(<span class="cf">String</span>)
+    email = <span class="cf">Column</span>(<span class="cf">String</span>)
+
+
+<span class="cc"># 2. You add a new column to the model</span>
+<span class="ck">class</span> <span class="cf">User</span>(<span class="cf">Base</span>):
+    __tablename__ = <span class="cs">"users"</span>
+    id         = <span class="cf">Column</span>(<span class="cf">Integer</span>, primary_key=<span class="ck">True</span>)
+    name       = <span class="cf">Column</span>(<span class="cf">String</span>)
+    email      = <span class="cf">Column</span>(<span class="cf">String</span>)
+    created_at = <span class="cf">Column</span>(<span class="cf">DateTime</span>, default=<span class="cm">datetime</span>.<span class="cm">utcnow</span>)
+
+
+<span class="cc"># 3. Run: alembic revision --autogenerate -m "add created_at"</span>
+<span class="cc"># Alembic detects the new column and generates:</span>
+
+<span class="ck">def</span> <span class="cf">upgrade</span>():
+    op.<span class="cm">add_column</span>(
+        <span class="cs">'users'</span>,
+        sa.<span class="cf">Column</span>(<span class="cs">'created_at'</span>, sa.<span class="cf">DateTime</span>())
+    )
+
+<span class="ck">def</span> <span class="cf">downgrade</span>():
+    op.<span class="cm">drop_column</span>(<span class="cs">'users'</span>, <span class="cs">'created_at'</span>)
+
+<span class="cc"># 4. Run: alembic upgrade head</span>
+<span class="cc"># Column appears in your database!</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Best Practices Checklist -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Best Practices — The Rules That Prevent Production Disasters</div>
+        <div class="diag-sub">Follow these rules every time. They exist because someone, somewhere, broke them and lost data. Learn from their mistakes.</div>
+        <div class="two-col" style="margin-top:0">
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">✅ Always do these</div>
+                <div class="bp-list">
+                    <div class="bp-item bp-do">
+                        <div class="bp-icon">✅</div>
+                        <div>
+                            <div class="bp-text-title">Always write a downgrade() function</div>
+                            <div class="bp-text-desc">Every upgrade must have a matching downgrade. If you can't roll back a migration, you can't fix it when it breaks in production. No exceptions.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-do">
+                        <div class="bp-icon">✅</div>
+                        <div>
+                            <div class="bp-text-title">Commit migrations with the code that needs them</div>
+                            <div class="bp-text-desc">Always commit your model change and its migration file in the same Git commit. This keeps code and database in sync when your teammates pull.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-do">
+                        <div class="bp-icon">✅</div>
+                        <div>
+                            <div class="bp-text-title">Add columns as nullable first</div>
+                            <div class="bp-text-desc">When adding a NOT NULL column to a table with existing rows, add it as nullable first, fill in data, then make it NOT NULL. Otherwise the migration fails on non-empty tables.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-do">
+                        <div class="bp-icon">✅</div>
+                        <div>
+                            <div class="bp-text-title">Test migrations on a copy of production data</div>
+                            <div class="bp-text-desc">Before running a migration in production, run it against a backup copy of the production database. Schema changes that work on 10 rows can fail on 10 million rows.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:14px">❌ Never do these</div>
+                <div class="bp-list">
+                    <div class="bp-item bp-dont">
+                        <div class="bp-icon">❌</div>
+                        <div>
+                            <div class="bp-text-title">Never edit an old migration file</div>
+                            <div class="bp-text-desc">Once a migration has run on any environment (dev, staging, production), it is locked. Editing it means other environments will never see the change. Create a new migration instead.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-dont">
+                        <div class="bp-icon">❌</div>
+                        <div>
+                            <div class="bp-text-title">Never change the database manually in production</div>
+                            <div class="bp-text-desc">If you manually ALTER TABLE in production, Alembic doesn't know about it. The next migration may fail or produce wrong results. All changes go through Alembic — always.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-dont">
+                        <div class="bp-icon">❌</div>
+                        <div>
+                            <div class="bp-text-title">Never run alembic downgrade base in production</div>
+                            <div class="bp-text-desc"><code class="ic">downgrade base</code> drops everything. This is only for local development. In production, roll back exactly one migration at a time with <code class="ic">downgrade -1</code>.</div>
+                        </div>
+                    </div>
+                    <div class="bp-item bp-dont">
+                        <div class="bp-icon">❌</div>
+                        <div>
+                            <div class="bp-text-title">Never skip reviewing auto-generated files</div>
+                            <div class="bp-text-desc">Auto-generate is helpful but not perfect. Renaming a column may generate a DROP + ADD (which loses data!) instead of an ALTER. Always read the generated file before running it.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick-start summary -->
+    <div class="reveal" style="margin-top:52px">
+        <div class="diag-title">Quick-Start Cheat Sheet — Everything on One Page</div>
+        <div class="diag-sub">Bookmark this. These are the only commands and concepts you need for 95% of all migration work.</div>
+        <div class="perf-grid">
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-blue">🔧</div>
+                    <div class="pc-name">One-time setup</div>
+                </div>
+                <div class="pc-body">
+                    <code class="ic">pip install alembic</code><br><br>
+                    <code class="ic">alembic init alembic</code><br><br>
+                    Edit <code class="ic">alembic.ini</code> → set database URL<br>
+                    Edit <code class="ic">alembic/env.py</code> → set <code class="ic">target_metadata = Base.metadata</code>
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-orange">⚡</div>
+                    <div class="pc-name">Daily commands</div>
+                </div>
+                <div class="pc-body">
+                    <code class="ic">alembic revision --autogenerate -m "description"</code> — create migration<br><br>
+                    <code class="ic">alembic upgrade head</code> — apply all pending<br><br>
+                    <code class="ic">alembic downgrade -1</code> — undo last migration<br><br>
+                    <code class="ic">alembic current</code> — check current version
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-green">🔄</div>
+                    <div class="pc-name">Every migration has two parts</div>
+                </div>
+                <div class="pc-body">
+                    <strong>upgrade()</strong> — what to do going forward (add columns, create tables)<br><br>
+                    <strong>downgrade()</strong> — the exact opposite of upgrade() (drop the column, drop the table)<br><br>
+                    Think of it as: "upgrade builds, downgrade demolishes."
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="pc-head">
+                    <div class="pc-icon pc-icon-purple">⚠️</div>
+                    <div class="pc-name">The golden rules</div>
+                </div>
+                <div class="pc-body">
+                    1. Never edit an old migration file<br>
+                    2. Always commit migration + model change together<br>
+                    3. Always add NOT NULL columns as nullable first<br>
+                    4. Always review auto-generated files before running them<br>
+                    5. Never manually alter the DB in production
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+</main>
+
+<footer class="mod-foot">
+    <div class="mod-foot-inner">
+        <div>
+            <div class="mf-label">Up next — Module 10</div>
+            <div class="mf-title">Async <em>SQLAlchemy</em></div>
+        </div>
+        <a href="async-sqlalchemy.html" class="btn-next">
+            Start Module 10
+            <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</footer>
+
+<script>
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

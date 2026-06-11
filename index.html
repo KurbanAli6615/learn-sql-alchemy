@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master SQLAlchemy — Complete Python Database Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F4F4;
+            --dark: #1A1C20;
+            --orange: #F0A500;
+            --orange-dark: #CF7500;
+            --muted: #6b6e75;
+            --border: #e2e2e2;
+            --font: 'Poppins', sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--dark);
+            overflow-x: hidden;
+        }
+
+        /* ── NAV ─────────────────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            background: rgba(26, 28, 32, 0.97);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(240, 165, 0, 0.12);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-icon {
+            width: 34px;
+            height: 34px;
+            background: var(--orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.3px;
+        }
+
+        .nav-name em {
+            color: var(--orange);
+            font-style: normal;
+        }
+
+        .nav-pill {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--orange);
+            background: rgba(240, 165, 0, 0.1);
+            border: 1px solid rgba(240, 165, 0, 0.25);
+            padding: 5px 14px;
+            border-radius: 100px;
+            letter-spacing: 0.8px;
+        }
+
+        /* ── HERO ────────────────────────────────────── */
+        .hero {
+            min-height: 100vh;
+            background: var(--dark);
+            display: flex;
+            align-items: center;
+            padding: 120px 48px 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* subtle grid texture */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(240,165,0,0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(240,165,0,0.035) 1px, transparent 1px);
+            background-size: 56px 56px;
+        }
+
+        /* orange glow orb */
+        .hero-orb {
+            position: absolute;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(240,165,0,0.07) 0%, transparent 65%);
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            animation: breathe 6s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.6; transform: translateY(-50%) scale(1); }
+            50% { opacity: 1; transform: translateY(-50%) scale(1.08); }
+        }
+
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 480px;
+            gap: 80px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--orange);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+            animation: fadeUp 0.7s ease both;
+        }
+
+        .hero-label::before {
+            content: '';
+            display: inline-block;
+            width: 28px;
+            height: 2px;
+            background: var(--orange);
+        }
+
+        .hero-heading {
+            font-size: clamp(52px, 7.5vw, 92px);
+            font-weight: 900;
+            color: #fff;
+            line-height: 0.95;
+            letter-spacing: -4px;
+            margin-bottom: 28px;
+            animation: fadeUp 0.7s 0.1s ease both;
+        }
+
+        .hero-heading .accent {
+            color: var(--orange);
+            display: block;
+        }
+
+        .hero-body {
+            font-size: 16px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.75;
+            max-width: 430px;
+            margin-bottom: 44px;
+            animation: fadeUp 0.7s 0.2s ease both;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            animation: fadeUp 0.7s 0.3s ease both;
+        }
+
+        .btn-start {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--orange);
+            color: var(--dark);
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            letter-spacing: 0.3px;
+            transition: background 0.25s var(--ease), transform 0.25s var(--ease);
+        }
+
+        .btn-start:hover {
+            background: var(--orange-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-scroll {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.5);
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .btn-scroll:hover { color: rgba(255,255,255,0.9); }
+
+        .hero-stats {
+            display: flex;
+            gap: 48px;
+            padding-top: 44px;
+            margin-top: 44px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            animation: fadeUp 0.7s 0.4s ease both;
+        }
+
+        .stat-val {
+            font-size: 36px;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+            letter-spacing: -2px;
+        }
+
+        .stat-val span { color: var(--orange); }
+
+        .stat-key {
+            margin-top: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Hero database illustration */
+        .hero-visual {
+            position: relative;
+            animation: fadeUp 0.7s 0.25s ease both;
+        }
+
+        .db-viz {
+            width: 100%;
+        }
+
+        /* ── MODULES SECTION ─────────────────────────── */
+        .modules {
+            padding: 100px 48px;
+            max-width: 1296px;
+            margin: 0 auto;
+        }
+
+        .sec-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 56px;
+        }
+
+        .sec-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--orange);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .sec-title {
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 900;
+            color: var(--dark);
+            letter-spacing: -2.5px;
+            line-height: 1;
+        }
+
+        .sec-count {
+            font-size: 80px;
+            font-weight: 900;
+            color: var(--orange);
+            line-height: 1;
+            opacity: 0.18;
+            letter-spacing: -5px;
+            user-select: none;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        /* ── CARDS ───────────────────────────────────── */
+        .card {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            text-decoration: none;
+            color: var(--dark);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(18px);
+            transition:
+                opacity 0.5s var(--ease),
+                transform 0.5s var(--ease),
+                background 0.3s ease,
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+        }
+
+        .card.in { opacity: 1; transform: translateY(0); }
+
+        .card.featured { grid-column: span 2; }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: var(--border);
+            transition: background 0.3s ease;
+        }
+
+        .card:hover { border-color: transparent; box-shadow: 0 12px 48px rgba(26,28,32,0.13); transform: translateY(-4px); }
+        .card:hover::after { background: var(--orange); }
+        .card.available:hover { background: var(--dark); }
+        .card.available:hover .card-num { color: var(--orange); }
+        .card.available:hover .card-title { color: #fff; }
+        .card.available:hover .card-desc { color: rgba(255,255,255,0.5); }
+        .card.available:hover .tag { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.45); }
+        .card.available:hover .card-arrow { color: var(--orange); transform: translate(4px,-4px); }
+        .card.available:hover .card-sep { border-color: rgba(255,255,255,0.08); }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-num {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--orange);
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 4px 11px;
+            border-radius: 100px;
+        }
+
+        .badge-soon {
+            background: rgba(26,28,32,0.05);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.25;
+            letter-spacing: -0.4px;
+            transition: color 0.3s ease;
+        }
+
+        .card.featured .card-title { font-size: 24px; }
+
+        .card-desc {
+            font-size: 13.5px;
+            color: var(--muted);
+            line-height: 1.65;
+            flex: 1;
+            transition: color 0.3s ease;
+        }
+
+        .card-sep {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0;
+            transition: border-color 0.3s ease;
+        }
+
+        .card-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .tag {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            background: var(--bg);
+            padding: 3px 10px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+        }
+
+        .card-arrow {
+            font-size: 18px;
+            color: var(--border);
+            transition: color 0.3s ease, transform 0.3s var(--ease);
+            line-height: 1;
+        }
+
+        /* ── FOOTER ──────────────────────────────────── */
+        .site-footer {
+            background: var(--dark);
+            padding: 60px 48px;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-brand {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.8px;
+        }
+
+        .footer-brand em {
+            color: var(--orange);
+            font-style: normal;
+        }
+
+        .footer-note {
+            font-size: 13px;
+            color: rgba(255,255,255,0.25);
+            max-width: 360px;
+            line-height: 1.6;
+            text-align: right;
+        }
+
+        /* ── KEYFRAMES ───────────────────────────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes floatY {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-10px); }
+        }
+
+        /* ── RESPONSIVE ──────────────────────────────── */
+        @media (max-width: 1000px) {
+            .hero-inner { grid-template-columns: 1fr; }
+            .hero-visual { display: none; }
+            .grid { grid-template-columns: repeat(2, 1fr); }
+            .card.featured { grid-column: span 2; }
+        }
+
+        @media (max-width: 640px) {
+            nav { padding: 0 24px; }
+            .hero { padding: 100px 24px 60px; }
+            .modules { padding: 64px 24px; }
+            .grid { grid-template-columns: 1fr; }
+            .card.featured { grid-column: span 1; }
+            .sec-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .sec-count { font-size: 48px; }
+            .footer-inner { flex-direction: column; gap: 16px; }
+            .footer-note { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="nav-brand">
+        <div class="nav-icon">SA</div>
+        <span class="nav-name">Master<em>SQLAlchemy</em></span>
+    </a>
+    <span class="nav-pill">11 Modules</span>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-orb"></div>
+    <div class="hero-inner">
+
+        <div class="hero-text">
+            <p class="hero-label">Python Database Mastery</p>
+            <h1 class="hero-heading">
+                Master
+                <span class="accent">SQLAlchemy</span>
+            </h1>
+            <p class="hero-body">
+                A structured, hands-on learning path — from relational database fundamentals to async patterns, migrations, and production-ready best practices.
+            </p>
+            <div class="hero-actions">
+                <a href="introduction.html" class="btn-start">
+                    Start with Module 01
+                    <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+                        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+                <a href="#modules" class="btn-scroll">
+                    See all modules
+                    <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+                        <path d="M7 2v10M3 8l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div>
+                    <div class="stat-val">11<span></span></div>
+                    <div class="stat-key">Modules</div>
+                </div>
+                <div>
+                    <div class="stat-val">100<span>%</span></div>
+                    <div class="stat-key">Free</div>
+                </div>
+                <div>
+                    <div class="stat-val">0 <span>→</span> Pro</div>
+                    <div class="stat-key">Beginner Friendly</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Animated DB Visualization -->
+        <div class="hero-visual">
+            <svg class="db-viz" viewBox="0 0 460 440" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background rings -->
+                <circle cx="230" cy="220" r="196" stroke="rgba(240,165,0,0.06)" stroke-width="1"/>
+                <circle cx="230" cy="220" r="148" stroke="rgba(240,165,0,0.04)" stroke-width="1"/>
+
+                <!-- Main database cylinder -->
+                <g style="animation: floatY 5s ease-in-out infinite;">
+                    <!-- Body -->
+                    <rect x="145" y="90" width="130" height="88" fill="#23262c" rx="4"/>
+                    <!-- Top ellipse -->
+                    <ellipse cx="210" cy="90" rx="65" ry="17" fill="#2b2e36" stroke="rgba(240,165,0,0.45)" stroke-width="1.5"/>
+                    <!-- Bottom ellipse -->
+                    <ellipse cx="210" cy="178" rx="65" ry="17" fill="#1e2025" stroke="rgba(240,165,0,0.3)" stroke-width="1.5"/>
+                    <!-- Side strokes -->
+                    <line x1="145" y1="90" x2="145" y2="178" stroke="rgba(240,165,0,0.35)" stroke-width="1.5"/>
+                    <line x1="275" y1="90" x2="275" y2="178" stroke="rgba(240,165,0,0.35)" stroke-width="1.5"/>
+                    <!-- Data line hints -->
+                    <line x1="160" y1="118" x2="260" y2="118" stroke="rgba(240,165,0,0.14)" stroke-width="1"/>
+                    <line x1="160" y1="140" x2="260" y2="140" stroke="rgba(240,165,0,0.14)" stroke-width="1"/>
+                    <line x1="160" y1="162" x2="260" y2="162" stroke="rgba(240,165,0,0.14)" stroke-width="1"/>
+                    <!-- Status dots -->
+                    <circle cx="168" cy="91" r="4" fill="#F0A500"/>
+                    <circle cx="182" cy="91" r="4" fill="rgba(240,165,0,0.35)"/>
+                    <circle cx="196" cy="91" r="4" fill="rgba(240,165,0,0.15)"/>
+                </g>
+
+                <!-- Left small cylinder -->
+                <g style="animation: floatY 5s 1s ease-in-out infinite;">
+                    <rect x="48" y="220" width="90" height="58" fill="#23262c" rx="3"/>
+                    <ellipse cx="93" cy="220" rx="45" ry="12" fill="#2b2e36" stroke="rgba(240,165,0,0.35)" stroke-width="1.2"/>
+                    <ellipse cx="93" cy="278" rx="45" ry="12" fill="#1e2025" stroke="rgba(240,165,0,0.25)" stroke-width="1.2"/>
+                    <line x1="48" y1="220" x2="48" y2="278" stroke="rgba(240,165,0,0.28)" stroke-width="1.2"/>
+                    <line x1="138" y1="220" x2="138" y2="278" stroke="rgba(240,165,0,0.28)" stroke-width="1.2"/>
+                    <line x1="60" y1="240" x2="126" y2="240" stroke="rgba(240,165,0,0.1)" stroke-width="1"/>
+                    <line x1="60" y1="258" x2="126" y2="258" stroke="rgba(240,165,0,0.1)" stroke-width="1"/>
+                    <circle cx="64" cy="221" r="3" fill="#F0A500"/>
+                </g>
+
+                <!-- Right small cylinder -->
+                <g style="animation: floatY 5s 2s ease-in-out infinite;">
+                    <rect x="312" y="235" width="90" height="58" fill="#23262c" rx="3"/>
+                    <ellipse cx="357" cy="235" rx="45" ry="12" fill="#2b2e36" stroke="rgba(240,165,0,0.35)" stroke-width="1.2"/>
+                    <ellipse cx="357" cy="293" rx="45" ry="12" fill="#1e2025" stroke="rgba(240,165,0,0.25)" stroke-width="1.2"/>
+                    <line x1="312" y1="235" x2="312" y2="293" stroke="rgba(240,165,0,0.28)" stroke-width="1.2"/>
+                    <line x1="402" y1="235" x2="402" y2="293" stroke="rgba(240,165,0,0.28)" stroke-width="1.2"/>
+                    <line x1="322" y1="255" x2="398" y2="255" stroke="rgba(240,165,0,0.1)" stroke-width="1"/>
+                    <line x1="322" y1="273" x2="398" y2="273" stroke="rgba(240,165,0,0.1)" stroke-width="1"/>
+                    <circle cx="328" cy="236" r="3" fill="#CF7500"/>
+                </g>
+
+                <!-- Connection lines (dashed) -->
+                <line x1="138" y1="250" x2="145" y2="180" stroke="rgba(240,165,0,0.22)" stroke-width="1.5" stroke-dasharray="5 4"/>
+                <line x1="312" y1="260" x2="275" y2="178" stroke="rgba(240,165,0,0.22)" stroke-width="1.5" stroke-dasharray="5 4"/>
+
+                <!-- Floating data packets -->
+                <circle cx="142" cy="215" r="7" fill="rgba(240,165,0,0)" stroke="rgba(240,165,0,0.5)" stroke-width="1.5" style="animation: ripple 2.5s ease-out infinite;"/>
+                <circle cx="290" cy="210" r="5" fill="rgba(207,117,0,0)" stroke="rgba(207,117,0,0.4)" stroke-width="1.5" style="animation: ripple 2.5s 0.8s ease-out infinite;"/>
+                <circle cx="230" cy="330" r="6" fill="rgba(240,165,0,0)" stroke="rgba(240,165,0,0.35)" stroke-width="1.5" style="animation: ripple 2.5s 1.5s ease-out infinite;"/>
+
+                <!-- Code snippet box -->
+                <g transform="translate(158, 330)">
+                    <rect width="108" height="54" rx="8" fill="#23262c" stroke="rgba(240,165,0,0.18)" stroke-width="1"/>
+                    <line x1="14" y1="16" x2="56" y2="16" stroke="#F0A500" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="14" y1="28" x2="72" y2="28" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="14" y1="40" x2="44" y2="40" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-linecap="round"/>
+                </g>
+
+                <!-- Bottom label -->
+                <text x="230" y="408" text-anchor="middle" fill="rgba(240,165,0,0.28)" font-size="10" font-family="Poppins,sans-serif" font-weight="700" letter-spacing="4">PYTHON · SQL · ORM</text>
+            </svg>
+        </div>
+    </div>
+</section>
+
+<!-- ── MODULES ────────────────────────────────────────── -->
+<section class="modules" id="modules">
+    <div class="sec-header">
+        <div>
+            <p class="sec-label">Learning Path</p>
+            <h2 class="sec-title">All Modules</h2>
+        </div>
+        <div class="sec-count">11</div>
+    </div>
+    <div class="grid" id="grid"></div>
+</section>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Master<em>SQLAlchemy</em></div>
+        <p class="footer-note">A comprehensive Python database learning path · Based on SQLAlchemy official documentation</p>
+    </div>
+</footer>
+
+<script>
+const modules = [
+    { n:'01', title:'Introduction',           desc:'Relational databases, the importance of ORMs, and how SQLAlchemy fits into modern Python development.',        link:'introduction.html',  live:true,  tags:['Beginner','Concepts'], featured:true },
+    { n:'02', title:'Core vs ORM',            desc:"SQLAlchemy's two-layer architecture — when to use each and how they complement each other.",                  link:'core-vs-orm.html',   live:true,  tags:['Architecture'] },
+    { n:'03', title:'Setup & Configuration',  desc:'Installing SQLAlchemy, creating engines, and connecting to PostgreSQL, MySQL, and SQLite.',                   link:'setup.html',         live:true,  tags:['Setup','Engines'] },
+    { n:'04', title:'SQLAlchemy Core',        desc:'The Expression Language, MetaData, tables and schemas, and every SQL operation — SELECT, INSERT, UPDATE, DELETE, JOIN, ORDER BY, GROUP BY — with visual table diagrams.',  link:'sqlalchemy-core.html', live:true,  tags:['Core','SQL','Expressions'] },
+    { n:'05', title:'ORM Basics',             desc:'Defining models with DeclarativeBase, building one-to-many and many-to-many relationships, mastering CRUD through Sessions, and querying with the full select() API.', link:'orm-basics.html',    live:true,  tags:['ORM','Session','CRUD'] },
+    { n:'06', title:'Advanced ORM Concepts', desc:'Deep-dive into loading strategies, association objects, self-referential relationships, inheritance mapping, hybrid properties, and custom column types.', link:'advanced-orm.html',  live:true,  tags:['ORM','Advanced','Types'] },
+    { n:'07', title:'Query Optimization & Performance', desc:'Eager vs lazy loading, the N+1 problem, writing efficient joins, and caching strategies with dogpile.cache and lru_cache.', link:'query-optimization.html', live:true, tags:['Performance','Caching'] },
+    { n:'08', title:'Session Management',      desc:'The session object, Unit of Work pattern, object states (transient/pending/persistent/detached), transaction management, and isolation levels with concurrency control.',  link:'session-management.html', live:true, tags:['Sessions','Transactions'] },
+    { n:'09', title:'Migrations with Alembic', desc:'Track every database schema change like Git tracks code. Learn how to set up Alembic, create migration files, upgrade and downgrade your database, and follow best practices for safe production deployments.', link:'alembic-migrations.html', live:true, tags:['Alembic','Migrations','Schema'] },
+    { n:'10', title:'Async SQLAlchemy',        desc:'Modern async-first SQLAlchemy with create_async_engine, AsyncSession, async_sessionmaker, and expire_on_commit. The patterns used in every production FastAPI application.', link:'async-sqlalchemy.html', live:true, tags:['Async','AsyncIO','FastAPI'] },
+    { n:'11', title:'FastAPI Integration',     desc:'Dependency injection with Depends(db_session), session-per-request lifecycle, service layer pattern, and pagination — the complete production setup for FastAPI + SQLAlchemy.', link:'fastapi-integration.html', live:true, tags:['FastAPI','Integration','DI'] },
+];
+
+const grid = document.getElementById('grid');
+
+modules.forEach((m, i) => {
+    const a = document.createElement('a');
+    a.href = m.link;
+    a.className = `card${m.live ? ' available' : ''}${m.featured ? ' featured' : ''}`;
+    a.style.transitionDelay = `${(i % 6) * 55}ms`;
+    a.innerHTML = `
+        <div class="card-top">
+            <span class="card-num">${m.n}</span>
+            ${m.live ? '' : '<span class="badge badge-soon">Coming Soon</span>'}
+        </div>
+        <h3 class="card-title">${m.title}</h3>
+        <p class="card-desc">${m.desc}</p>
+        <hr class="card-sep">
+        <div class="card-foot">
+            <div class="tags">${m.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+            <span class="card-arrow">→</span>
+        </div>
+    `;
+    grid.appendChild(a);
+});
+
+// Scroll reveal
+const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.card').forEach(c => io.observe(c));
+</script>
+
+<style>
+@keyframes floatY {
+    0%,100%{ transform: translateY(0); }
+    50%{ transform: translateY(-10px); }
+}
+@keyframes ripple {
+    0%  { transform: scale(0.8); opacity: 0.8; }
+    100%{ transform: scale(2.2); opacity: 0; }
+}
+</style>
+
+</body>
+</html>
